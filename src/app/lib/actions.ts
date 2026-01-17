@@ -12,8 +12,15 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    await signIn('credentials', formData);
+    console.log('[AUTH ACTION] Attempting sign in...');
+    await signIn('credentials', {
+      phone: formData.get('phone'),
+      password: formData.get('password'),
+      redirectTo: '/dashboard',
+    });
+    console.log('[AUTH ACTION] Sign in successful');
   } catch (error) {
+    console.log('[AUTH ACTION] Error caught:', error);
     if (error instanceof AuthError) {
       switch (error.type) {
         case 'CredentialsSignin':
@@ -22,6 +29,7 @@ export async function authenticate(
           return 'Something went wrong.';
       }
     }
+    // NextAuth throws NEXT_REDIRECT on successful login, so we need to rethrow
     throw error;
   }
 }
