@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  JMB
+  STAFF
+  OWNER
+  TENANT
+}
+
+enum CommitteeType {
+  JMB
+  COMMUNITY
+}
+
+enum Gender {
+  LELAKI
+  PEREMPUAN
+}
+
+enum Religion {
+  ISLAM
+  BUDDHA
+  HINDU
+  KRISTIAN
+  LAIN_LAIN
+}
+
+enum UnitType {
+  ATAS
+  BAWAH
+}
+
+enum ParkingType {
+  ACCESSORY
+  COMMON
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum ComplaintType {
+  GENERAL
+  PARKING_UNIT
+  PARKING_COMMON
+}
+
+enum BillStatus {
+  PENDING
+  PAID
+  REJECTED
+  APPROVED
+}
+
+enum FundType {
+  MAINTENANCE
+  SINKING
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NoticeTarget {
+  ALL
+  ATAS_ONLY
+  BAWAH_ONLY
+}
+
+enum ActivityStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String?   @unique
+  password  String
+  name      String
+  phone     String    @unique
+  icNumber  String?   @unique
+  gender    Gender?
+  religion  Religion?
+  
+  // Dates
+  handoverDate DateTime?
+  snpDate      DateTime?
+
+  // Files
+  snpFile      String?
+  fileB        String?
+  fileC        String?
+
+  role      Role     @default(OWNER)
+  
+  // Committee Info
+  committeeType CommitteeType?
+  committeePosition String?
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  ownedUnits  Unit[]      @relation("UnitOwner")
+  rentedUnits Unit[]      @relation("UnitTenant")
+  complaints  Complaint[]
+  auditLogs   AuditLog[]
+  notices     Notice[]
+
+  // Finance
+  createdExpenses  Expense[] @relation("ExpenseCreator")
+  approvedExpenses Expense[] @relation("ExpenseApprover")
+  activityRequests ActivityRequest[] @relation("ActivityCreator")
+  approvedActivities ActivityRequest[] @relation("ActivityApprover")
+}
+
+model Lot {
+  id        String   @id @default(cuid())
+  lotNumber String   @unique // e.g. J-13
+  units     Unit[]
+}
+
+model Unit {
+  id                  String    @id @default(cuid())
+  unitNumber          String    @unique
+  type                UnitType
+  lotId               String
+  lot                 Lot       @relation(fields: [lotId], references: [id])
+  
+  ownerId             String?
+  owner               User?     @relation("UnitOwner", fields: [ownerId], references: [id])
+  
+  tenantId            String?
+  tenant              User?     @relation("UnitTenant", fields: [tenantId], references: [id])
+
+  isActive            Boolean   @default(true)
+  deletedAt           DateTime?
+
+  parkings            Parking[]
+  bills               Bill[]
+  incomeCollections   IncomeCollection[]
+  manualArrearsAmount Float     @default(0)
+  monthlyAdjustmentAmount Float @default(0)
+  activityRequests    ActivityRequest[]
+}
+
+model Parking {
+  id        String      @id @default(cuid())
+  number    String      @unique
+  type      ParkingType
+  
+  unitId    String?
+  unit      Unit?       @relation(fields: [unitId], references: [id])
+}
+
+model Bill {
+  id         String     @id @default(cuid())
+  amount     Float
+  month      Int
+  year       Int
+  type       FundType   @default(MAINTENANCE)
+  status     BillStatus @default(PENDING)
+  receiptUrl String?
+  
+  unitId     String
+  unit       Unit       @relation(fields: [unitId], references: [id])
+  
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Complaint {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  type        ComplaintType
+  status      ComplaintStatus @default(OPEN)
+  imageUrl    String?
+  
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Notice {
+  id        String       @id @default(cuid())
+  title     String
+  content   String
+  target    NoticeTarget
+  pdfUrl    String?
+  
+  createdById String
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String?
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+}
+
+model Fund {
+  id          String @id @default(cuid())
+  code        FundType @unique
+  name        String
+  
+  expenses          Expense[]
+  incomeCollections IncomeCollection[]
+}
+
+model IncomeCollection {
+  id        String   @id @default(cuid())
+  amount    Float
+  date      DateTime 
+  source    FundType
+  description String?
+  
+  unitId    String?
+  unit      Unit?    @relation(fields: [unitId], references: [id])
+  
+  fundId    String
+  fund      Fund     @relation(fields: [fundId], references: [id])
+  
+  createdAt DateTime @default(now())
+}
+
+model ExpenseCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  expenses Expense[]
+}
+
+model Expense {
+  id            String        @id @default(cuid())
+  amount        Float
+  expenseDate   DateTime
+  description   String?
+  attachmentUrl String?
+  status        ExpenseStatus @default(PENDING)
+  
+  categoryId    String
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
+  
+  fundId        String
+  fund          Fund            @relation(fields: [fundId], references: [id])
+  
+  createdById   String
+  createdBy     User            @relation("ExpenseCreator", fields: [createdById], references: [id])
+  
+  approvedById  String?
+  approvedBy    User?           @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model ActivityRequest {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  date          DateTime
+  location      String?
+  status        ActivityStatus @default(PENDING)
+
+  unitId        String?
+  unit          Unit?          @relation(fields: [unitId], references: [id])
+
+  createdById   String
+  createdBy     User           @relation("ActivityCreator", fields: [createdById], references: [id])
+
+  approvedById  String?
+  approvedBy    User?          @relation("ActivityApprover", fields: [approvedById], references: [id])
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
