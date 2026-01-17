@@ -20,6 +20,16 @@ export async function authenticate(
     });
     console.log('[AUTH ACTION] Sign in successful');
   } catch (error) {
+    const isNextRedirect =
+      error instanceof Error &&
+      (error.message === 'NEXT_REDIRECT' ||
+        (typeof (error as { digest?: string }).digest === 'string' &&
+          (error as { digest?: string }).digest?.startsWith('NEXT_REDIRECT')));
+    if (isNextRedirect) {
+      // Expected for successful sign-in when redirecting.
+      throw error;
+    }
+
     console.log('[AUTH ACTION] Error caught:', error);
     if (error instanceof AuthError) {
       switch (error.type) {
