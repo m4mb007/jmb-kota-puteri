@@ -1,4 +1,6 @@
 import { Sidebar } from '@/components/layout/sidebar';
+import { Menu, Search, Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,13 +10,57 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="h-full p-8 max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
+    <div className="flex h-screen overflow-hidden bg-slate-50/50">
+      {/* Sidebar - Desktop */}
+      <div className="hidden md:flex h-full">
+        <Sidebar />
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Header */}
+        <header className="h-16 flex items-center justify-between px-4 md:px-8 bg-white border-b border-slate-200 shrink-0">
+          <div className="flex items-center gap-4 flex-1">
+            <Button variant="ghost" size="icon" className="md:hidden">
+              <Menu className="h-5 w-5" />
+            </Button>
+            
+            <div className="hidden md:flex items-center gap-2 max-w-md w-full relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Cari unit, nama, atau no. telefon..." 
+                className="w-full bg-slate-100/50 border-none rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/10 focus:bg-white transition-all outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 md:gap-4">
+            <Button variant="ghost" size="icon" className="relative text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
+            </Button>
+            
+            <div className="h-8 w-px bg-slate-200 hidden md:block" />
+            
+            <div className="flex items-center gap-3 ml-2">
+              <div className="hidden md:flex flex-col items-end text-right">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Sistem</span>
+                <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Online
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
