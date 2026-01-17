@@ -104,7 +104,7 @@ export async function Sidebar() {
             <form
               action={async () => {
                 'use server';
-                await signOut();
+                await signOut({ redirectTo: '/login' });
               }}
             >
               <button className={cn(
