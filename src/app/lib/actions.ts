@@ -32,9 +32,7 @@ const RegisterSchema = z.object({
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Confirm password is required'),
-  role: z.enum(['OWNER', 'TENANT', 'STAFF', 'JMB'], {
-    errorMap: () => ({ message: 'Please select a valid role' }),
-  }),
+  role: z.enum(['OWNER', 'TENANT', 'STAFF', 'JMB']),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
