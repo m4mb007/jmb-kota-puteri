@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { authenticate } from '@/app/lib/actions';
+import Link from 'next/link';
 
 export default function LoginForm() {
   const [errorMessage, formAction, isPending] = useActionState(
@@ -60,6 +61,13 @@ export default function LoginForm() {
       >
         Log in
       </button>
+      
+      <div className="text-center text-sm text-gray-600">
+        Belum mempunyai akaun?{' '}
+        <Link href="/register" className="text-blue-500 hover:text-blue-400 font-medium">
+          Daftar di sini
+        </Link>
+      </div>
     </form>
   );
 }
