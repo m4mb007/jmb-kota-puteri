@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+export const dynamic = 'force-dynamic';
+
 async function getBaseBillAmount() {
   try {
     const rows = await prisma.$queryRaw<{ value: string }[]>`

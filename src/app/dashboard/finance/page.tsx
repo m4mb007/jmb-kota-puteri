@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatCurrency } from '@/lib/utils';
 import { ExpenseActions } from './expense-actions';
 
+export const dynamic = 'force-dynamic';
+
 export default async function FinancePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const session = await auth();
   if (!session?.user) {

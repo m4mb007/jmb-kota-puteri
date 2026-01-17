@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation';
 import ProfileForm from '@/components/users/profile-form';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 function calculateInstallmentPlans(total: number) {
   if (!total || total <= 0) return [];
 

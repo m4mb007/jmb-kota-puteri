@@ -11,6 +11,8 @@ import {
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AuditLogsPage() {
   const session = await auth();
   

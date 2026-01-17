@@ -16,6 +16,8 @@ import { createUnit } from '@/lib/actions/units';
 import { ArrowLeft } from 'lucide-react';
 import { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Cipta Unit Baru',
 };

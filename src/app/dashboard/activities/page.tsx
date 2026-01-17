@@ -15,6 +15,8 @@ import { CalendarRange, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { updateActivityStatus } from '@/lib/actions/activities';
 import { ActivitiesExportButton } from './activities-export-button';
 
+export const dynamic = 'force-dynamic';
+
 interface ActivitiesSearchParams {
   status?: string;
 }

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard';
 import { ResidentDashboard } from '@/components/dashboard/resident-dashboard';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   try {
     const session = await auth();

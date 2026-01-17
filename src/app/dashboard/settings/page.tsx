@@ -9,6 +9,8 @@ import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 async function getBaseBillAmount() {
   try {
     const rows = await prisma.$queryRaw<{ value: string }[]>`

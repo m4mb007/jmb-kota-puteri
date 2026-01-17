@@ -5,6 +5,8 @@ import { auth } from '@/auth';
 import EditUserForm from '@/components/users/edit-user-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+export const dynamic = 'force-dynamic';
+
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (session?.user?.role !== 'SUPER_ADMIN') {

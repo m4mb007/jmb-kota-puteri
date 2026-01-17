@@ -15,6 +15,8 @@ import {
 import { createNotice } from '@/lib/actions/notices';
 import { ArrowLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CreateNoticePage() {
   const session = await auth();
   

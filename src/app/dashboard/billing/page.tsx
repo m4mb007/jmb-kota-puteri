@@ -16,6 +16,8 @@ import { BillActions } from './bill-actions';
 import { MonthlyReportButton } from './monthly-report-button';
 import { BulkBillingButton } from './bulk-billing-button';
 
+export const dynamic = 'force-dynamic';
+
 interface BillingSearchParams {
   status?: string;
 }
