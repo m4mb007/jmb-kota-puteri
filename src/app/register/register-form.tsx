@@ -55,6 +55,31 @@ export default function RegisterForm() {
       <div className="flex flex-col gap-2">
         <label
           className="text-sm font-medium text-gray-900"
+          htmlFor="role"
+        >
+          Pilihan Role
+        </label>
+        <select
+          className="peer block w-full rounded-md border border-gray-200 py-[9px] px-3 text-sm outline-2 text-gray-900"
+          id="role"
+          name="role"
+          required
+          defaultValue=""
+        >
+          <option value="" disabled>Sila pilih role</option>
+          <option value="OWNER">Pemilik (Owner)</option>
+          <option value="TENANT">Penyewa (Tenant)</option>
+          <option value="STAFF">Kakitangan (Staff)</option>
+          <option value="JMB">JMB</option>
+        </select>
+        {state?.errors?.role && (
+          <p className="text-sm text-red-500">{state.errors.role[0]}</p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label
+          className="text-sm font-medium text-gray-900"
           htmlFor="email"
         >
           Email (Pilihan)

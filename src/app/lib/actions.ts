@@ -32,6 +32,9 @@ const RegisterSchema = z.object({
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Confirm password is required'),
+  role: z.enum(['OWNER', 'TENANT', 'STAFF', 'JMB'], {
+    errorMap: () => ({ message: 'Please select a valid role' }),
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -48,6 +51,7 @@ export async function registerUser(
     email: formData.get('email'),
     password: formData.get('password'),
     confirmPassword: formData.get('confirmPassword'),
+    role: formData.get('role'),
   });
 
   if (!validatedFields.success) {
@@ -57,7 +61,7 @@ export async function registerUser(
     };
   }
 
-  const { name, phone, email, password } = validatedFields.data;
+  const { name, phone, email, password, role } = validatedFields.data;
 
   try {
     // Check if user already exists
@@ -93,7 +97,7 @@ export async function registerUser(
         phone,
         email: email || null,
         password: hashedPassword,
-        role: 'OWNER', // Default role
+        role: role as any,
       },
     });
 
