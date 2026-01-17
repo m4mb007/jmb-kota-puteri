@@ -62,6 +62,8 @@ export async function registerUser(
   const { name, phone, email, password, role } = validatedFields.data;
 
   try {
+    console.log('[REGISTER] Attempting to register user:', { name, phone, email, role });
+    
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -73,6 +75,7 @@ export async function registerUser(
     });
 
     if (existingUser) {
+      console.log('[REGISTER] User already exists:', existingUser.phone);
       if (existingUser.phone === phone) {
         return {
           message: 'Phone number already registered',
@@ -86,10 +89,13 @@ export async function registerUser(
     }
 
     // Hash password
+    console.log('[REGISTER] Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('[REGISTER] Password hashed successfully');
 
     // Create user
-    await prisma.user.create({
+    console.log('[REGISTER] Creating user in database...');
+    const newUser = await prisma.user.create({
       data: {
         name,
         phone,
@@ -98,10 +104,12 @@ export async function registerUser(
         role: role as any,
       },
     });
+    
+    console.log('[REGISTER] User created successfully:', newUser.id, newUser.phone);
 
     // Redirect to login page after successful registration
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('[REGISTER] Registration error:', error);
     return {
       message: 'An error occurred during registration. Please try again.',
     };
