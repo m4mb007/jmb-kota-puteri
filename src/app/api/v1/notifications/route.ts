@@ -99,9 +99,9 @@ export async function GET() {
         });
       });
 
-      // Pending complaints
+      // Open complaints
       const pendingComplaints = await prisma.complaint.findMany({
-        where: { status: 'PENDING' },
+        where: { status: 'OPEN' },
         orderBy: { createdAt: 'desc' },
         take: 3,
         include: {
