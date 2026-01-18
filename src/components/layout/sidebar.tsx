@@ -81,7 +81,14 @@ export async function Sidebar() {
             "hover:bg-slate-50 hover:border-slate-100",
             isManagement && "hover:bg-white/5 hover:border-white/10"
           )}>
-            <div className="flex items-center gap-3 mb-4">
+            <Link 
+              href="/dashboard/profile"
+              className={cn(
+                "flex items-center gap-3 mb-4 p-2 -m-2 rounded-xl transition-all duration-200 group",
+                "hover:bg-slate-100/50 hover:shadow-sm",
+                isManagement && "hover:bg-white/5"
+              )}
+            >
               <div className={cn(
                 "h-10 w-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-sm",
                 isManagement && "bg-blue-600/20 text-blue-400"
@@ -89,7 +96,7 @@ export async function Sidebar() {
                 <User className="h-5 w-5" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold truncate leading-none mb-1">
+                <span className="text-sm font-bold truncate leading-none mb-1 group-hover:text-blue-600 transition-colors">
                   {session?.user?.name || 'Pengguna'}
                 </span>
                 <span className={cn(
@@ -99,7 +106,7 @@ export async function Sidebar() {
                   {session?.user?.role || 'Role'}
                 </span>
               </div>
-            </div>
+            </Link>
             
             <form
               action={async () => {

@@ -26,7 +26,20 @@ export default function ProfileForm({ user }: ProfileFormProps) {
     setIsSubmitting(true);
     try {
       await updateProfile(formData);
-      toast.success('Profil berjaya dikemaskini');
+      const hasPasswordChange = formData.get('newPassword');
+      const successMessage = hasPasswordChange 
+        ? 'Profil dan kata laluan berjaya dikemaskini' 
+        : 'Profil berjaya dikemaskini';
+      toast.success(successMessage);
+      // Clear password fields after successful update
+      const form = document.querySelector('form');
+      if (form) {
+        const passwordFields = ['currentPassword', 'newPassword', 'confirmPassword'];
+        passwordFields.forEach(fieldName => {
+          const field = form.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
+          if (field) field.value = '';
+        });
+      }
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Gagal mengemaskini profil');
@@ -38,13 +51,13 @@ export default function ProfileForm({ user }: ProfileFormProps) {
   return (
     <form action={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Nama Penuh (Tidak boleh diubah)</Label>
-        <Input id="name" value={user.name} disabled className="bg-slate-100" />
+        <Label htmlFor="name">Nama Penuh</Label>
+        <Input id="name" name="name" defaultValue={user.name} required />
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="email">Emel (Tidak boleh diubah)</Label>
-        <Input id="email" value={user.email || ''} disabled className="bg-slate-100" />
+        <Label htmlFor="email">Emel</Label>
+        <Input id="email" name="email" type="email" defaultValue={user.email || ''} />
       </div>
 
       <div className="space-y-2">
@@ -85,6 +98,47 @@ export default function ProfileForm({ user }: ProfileFormProps) {
             <SelectItem value="LAIN_LAIN">Lain-lain</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-4 border-t pt-4 mt-4">
+        <h3 className="font-semibold text-lg">Tukar Kata Laluan</h3>
+        <p className="text-sm text-muted-foreground">
+          Biarkan kosong jika tidak mahu menukar kata laluan.
+        </p>
+        
+        <div className="space-y-2">
+          <Label htmlFor="currentPassword">Kata Laluan Semasa</Label>
+          <Input 
+            id="currentPassword" 
+            name="currentPassword" 
+            type="password" 
+            placeholder="Masukkan kata laluan semasa"
+            autoComplete="current-password"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">Kata Laluan Baru</Label>
+            <Input 
+              id="newPassword" 
+              name="newPassword" 
+              type="password" 
+              placeholder="Min. 6 aksara"
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Sahkan Kata Laluan Baru</Label>
+            <Input 
+              id="confirmPassword" 
+              name="confirmPassword" 
+              type="password" 
+              placeholder="Masukkan semula"
+              autoComplete="new-password"
+            />
+          </div>
+        </div>
       </div>
 
       {user.role === 'OWNER' && (

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Home, FileText, Megaphone, ArrowRight, CalendarRange, Clock, CreditCard, BellRing, Info } from 'lucide-react';
+import { Home, FileText, Megaphone, ArrowRight, CalendarRange, Clock, CreditCard, BellRing, Info, Car, ShieldCheck, ShieldAlert, Gavel } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ResidentDashboardProps {
@@ -12,6 +12,9 @@ interface ResidentDashboardProps {
   manualArrearsTotal: number;
   ownActivities: any[];
   communityActivities: any[];
+  activeAGMs?: any[];
+  isEligibleToVote?: boolean;
+  votingEligibilityReason?: string | null;
 }
 
 export function ResidentDashboard({
@@ -22,6 +25,9 @@ export function ResidentDashboard({
   manualArrearsTotal,
   ownActivities,
   communityActivities,
+  activeAGMs = [],
+  isEligibleToVote = true,
+  votingEligibilityReason,
 }: ResidentDashboardProps) {
   const systemPending = pendingBills.reduce(
     (acc, bill) => acc + Number(bill.amount || 0),
@@ -30,6 +36,8 @@ export function ResidentDashboard({
   const totalPending = systemPending + (manualArrearsTotal || 0);
   const pendingBillsCount = pendingBills.length;
   const upcomingActivitiesCount = ownActivities.length + communityActivities.length;
+
+  const totalParking = units.reduce((acc, unit) => acc + (unit.parkings?.length || 0), 0);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -64,15 +72,25 @@ export function ResidentDashboard({
         <Card className="border-none shadow-sm overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
-              <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">Unit Kediaman Saya</CardTitle>
-              <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Senarai unit didaftarkan</p>
+              <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">Unit & Parkir</CardTitle>
+              <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Kediaman dan akses kenderaan</p>
             </div>
             <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
               <Home className="h-5 w-5" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900">{units.length}</div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-3xl font-black text-slate-900">{units.length}</div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Unit Kediaman</p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-black text-blue-600">{totalParking}</div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Petak Parkir</p>
+              </div>
+            </div>
+
             <div className="mt-6 space-y-3">
               {units.length === 0 ? (
                 <div className="p-4 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center">
@@ -91,9 +109,17 @@ export function ResidentDashboard({
                       </div>
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900 text-sm">{unit.unitNumber}</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          {unit.type}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                            {unit.type}
+                          </span>
+                          {unit.parkings?.length > 0 && (
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-blue-500">
+                              <Car className="w-3 h-3" />
+                              <span>{unit.parkings.length}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -104,7 +130,7 @@ export function ResidentDashboard({
                           </div>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-black text-emerald-500 uppercase">Tiada Tunggakan</span>
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">Selesai</span>
                       )}
                     </div>
                   </Link>
@@ -113,6 +139,7 @@ export function ResidentDashboard({
             </div>
           </CardContent>
         </Card>
+
 
         {/* Billing Card */}
         <Card className={cn(
@@ -249,7 +276,107 @@ export function ResidentDashboard({
         </Card>
       </div>
 
+      {/* AGM & Voting Section */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-none shadow-sm overflow-hidden bg-white">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 pb-4">
+            <div className="flex items-center gap-2">
+              <Gavel className="w-5 h-5 text-blue-600" />
+              <CardTitle className="text-lg font-bold">Mesyuarat Agung (AGM)</CardTitle>
+            </div>
+            {activeAGMs.length > 0 && (
+              <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg uppercase tracking-widest">
+                {activeAGMs.length} Akan Datang
+              </span>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-50">
+              {activeAGMs.length === 0 ? (
+                <div className="p-8 text-center text-sm font-bold text-slate-400 italic">
+                  Tiada Mesyuarat Agung dijadualkan buat masa ini.
+                </div>
+              ) : (
+                activeAGMs.map((agm) => (
+                  <Link
+                    key={agm.id}
+                    href={`/dashboard/agm/${agm.id}`}
+                    className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors group"
+                  >
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex flex-col items-center justify-center shrink-0 border border-blue-100 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all">
+                        <span className="text-xs font-black text-blue-600 group-hover:text-white leading-none">{new Date(agm.meetingDate).getDate()}</span>
+                        <span className="text-[8px] font-black text-blue-400 group-hover:text-blue-100 uppercase">{new Date(agm.meetingDate).toLocaleDateString('ms-MY', { month: 'short' })}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{agm.title}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                            {new Date(agm.meetingDate).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                  </Link>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={cn(
+          "border-none shadow-sm overflow-hidden",
+          isEligibleToVote ? "bg-emerald-50/30" : "bg-rose-50/30"
+        )}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className={cn("w-5 h-5", isEligibleToVote ? "text-emerald-600" : "text-rose-600")} />
+              <CardTitle className="text-lg font-bold">Kelayakan Mengundi</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center text-center py-4">
+              {isEligibleToVote ? (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                    <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-black text-emerald-700 uppercase tracking-tight">Layak Mengundi</h3>
+                  <p className="text-xs font-bold text-emerald-600/70 mt-2 max-w-[250px]">
+                    Tahniah! Anda layak untuk mengundi dalam Mesyuarat Agung akan datang.
+                  </p>
+                  {votingEligibilityReason && (
+                    <div className="mt-4 px-4 py-2 bg-emerald-100/50 rounded-xl border border-emerald-200">
+                      <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-1">Nota JMB</p>
+                      <p className="text-xs font-semibold text-emerald-600">{votingEligibilityReason}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+                    <ShieldAlert className="w-8 h-8 text-rose-600" />
+                  </div>
+                  <h3 className="text-xl font-black text-rose-700 uppercase tracking-tight">Tidak Layak</h3>
+                  <p className="text-xs font-bold text-rose-600/70 mt-2 max-w-[250px]">
+                    Maaf, kelayakan mengundi digantung buat sementara waktu kerana terdapat tunggakan aktif.
+                  </p>
+                  <Link href="/dashboard/billing" className="mt-6">
+                    <Button className="bg-rose-600 hover:bg-rose-700 text-xs font-black uppercase tracking-widest rounded-xl px-8">
+                      Jelaskan Tunggakan
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Notices & Quick Actions */}
+
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Notices Section */}
         <div className="lg:col-span-3">

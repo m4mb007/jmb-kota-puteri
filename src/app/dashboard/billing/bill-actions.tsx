@@ -29,6 +29,9 @@ export function BillActions({
   const isAdmin = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(userRole);
   const isOwner = ['OWNER', 'TENANT'].includes(userRole);
   const { id, status, receiptUrl } = bill;
+  
+  // Check if it's a manual payment receipt
+  const isManualReceipt = receiptUrl && receiptUrl.includes('manual-receipt');
 
   const handleAdminManualPaymentClick = () => {
     const ref = window.prompt('Masukkan nombor rujukan bayaran (contoh: FPX / bank):');
@@ -42,14 +45,26 @@ export function BillActions({
 
   const handleAdminFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Fail terlalu besar (Max 5MB)');
+    if (!file) {
+      alert('Resit diperlukan untuk bayaran manual. Sila pilih fail resit.');
       return;
     }
 
-    if (!confirm('Adakah anda pasti mahu menandakan bil ini sebagai DIBAYAR (Manual)?')) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Fail terlalu besar (Max 5MB)');
+      if (adminFileInputRef.current) adminFileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      alert('Format fail tidak sah. Sila muat naik JPG, PNG atau PDF sahaja.');
+      if (adminFileInputRef.current) adminFileInputRef.current.value = '';
+      return;
+    }
+
+    if (!confirm('Adakah anda pasti mahu menandakan bil ini sebagai DIBAYAR (Manual)? Pembayaran ini akan diluluskan secara automatik.')) {
       if (adminFileInputRef.current) adminFileInputRef.current.value = '';
       return;
     }
@@ -62,9 +77,10 @@ export function BillActions({
 
     try {
       await adminManualPayment(formData);
-    } catch (error) {
+      alert('Pembayaran manual berjaya direkodkan');
+    } catch (error: any) {
       console.error(error);
-      alert('Gagal mengemaskini status');
+      alert(error?.message || 'Gagal mengemaskini status');
     } finally {
       setIsUploading(false);
       if (adminFileInputRef.current) adminFileInputRef.current.value = '';
@@ -119,11 +135,18 @@ export function BillActions({
           href={receiptUrl} 
           target="_blank" 
           rel="noopener noreferrer"
-          title="Lihat Resit"
+          title={isManualReceipt ? "Lihat Resit (Bayaran Manual)" : "Lihat Resit"}
+          className="inline-block"
         >
-          <Button variant="outline" size="sm" className="h-8 gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={`h-8 gap-2 ${isManualReceipt ? 'border-purple-200 text-purple-600 hover:bg-purple-50' : ''}`}
+          >
             <FileText className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only sm:inline-block">Resit</span>
+            <span className="sr-only sm:not-sr-only sm:inline-block">
+              {isManualReceipt ? 'Resit Manual' : 'Resit'}
+            </span>
           </Button>
         </a>
       )}

@@ -57,8 +57,21 @@ export default function EditUnitForm({ unit, users }: EditUnitFormProps) {
         <div className="space-y-2">
         <Label>Nombor Unit</Label>
         <div className="p-2 border rounded-md bg-slate-50 text-slate-500">
-          {unit.unitNumber} ({unit.type})
+          {unit.unitNumber}
         </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="type">Jenis Unit</Label>
+          <Select name="type" defaultValue={unit.type} required>
+            <SelectTrigger id="type">
+              <SelectValue placeholder="Pilih Jenis" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ATAS">Unit Atas</SelectItem>
+              <SelectItem value="BAWAH">Unit Bawah</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

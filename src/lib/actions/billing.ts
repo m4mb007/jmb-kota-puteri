@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { createAuditLog } from '@/lib/actions/audit';
 import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { sendEmail, EMAIL_TEMPLATES } from '@/lib/email';
 
@@ -109,9 +110,16 @@ export async function uploadReceipt(formData: FormData) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create unique filename
+    // Create unique filename with proper extension handling
     const timestamp = Date.now();
-    const extension = file.name.split('.').pop();
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    
+    // Validate extension
+    const validExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+    if (!validExtensions.includes(extension)) {
+      throw new Error('Format fail tidak sah. Sila muat naik JPG, PNG atau PDF sahaja.');
+    }
+    
     const filename = `receipt-${billId}-${timestamp}.${extension}`;
     
     // Ensure upload directory exists
@@ -121,6 +129,11 @@ export async function uploadReceipt(formData: FormData) {
     // Save file
     const filepath = join(uploadDir, filename);
     await writeFile(filepath, buffer);
+    
+    // Verify file was written
+    if (!existsSync(filepath)) {
+      throw new Error('Gagal menyimpan fail. Sila cuba lagi.');
+    }
 
     // Update bill
     const receiptUrl = `/uploads/receipts/${filename}`;
@@ -132,11 +145,11 @@ export async function uploadReceipt(formData: FormData) {
       },
     });
 
-    await createAuditLog('UPLOAD_RECEIPT', `Uploaded receipt for Bill ${billId}`);
+    await createAuditLog('UPLOAD_RECEIPT', `Uploaded receipt for Bill ${billId}: ${filename}`);
 
   } catch (error) {
     console.error('Failed to upload receipt:', error);
-    throw new Error('Gagal memuat naik resit.');
+    throw new Error(error instanceof Error ? error.message : 'Gagal memuat naik resit.');
   }
 
   revalidatePath('/dashboard/billing');
@@ -160,6 +173,11 @@ export async function adminManualPayment(formData: FormData) {
     throw new Error('Nombor rujukan diperlukan untuk bayaran manual.');
   }
 
+  // Validate that file is provided (mandatory for manual payment)
+  if (!file || file.size === 0) {
+    throw new Error('Resit diperlukan untuk bayaran manual. Sila muat naik resit.');
+  }
+
   const bill = await prisma.bill.findUnique({ where: { id: billId } });
   if (!bill) throw new Error('Bill not found');
 
@@ -169,7 +187,7 @@ export async function adminManualPayment(formData: FormData) {
 
   let receiptUrl = undefined;
 
-  // Handle file upload if provided
+  // Handle file upload (now mandatory)
   if (file && file.size > 0) {
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -186,9 +204,16 @@ export async function adminManualPayment(formData: FormData) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      // Create unique filename
+      // Create unique filename with proper extension handling
       const timestamp = Date.now();
-      const extension = file.name.split('.').pop();
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+      
+      // Validate extension
+      const validExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+      if (!validExtensions.includes(extension)) {
+        throw new Error('Format fail tidak sah. Sila muat naik JPG, PNG atau PDF sahaja.');
+      }
+      
       const filename = `manual-receipt-${billId}-${timestamp}.${extension}`;
       
       // Ensure upload directory exists
@@ -198,12 +223,22 @@ export async function adminManualPayment(formData: FormData) {
       // Save file
       const filepath = join(uploadDir, filename);
       await writeFile(filepath, buffer);
+      
+      // Verify file was written
+      if (!existsSync(filepath)) {
+        throw new Error('Gagal menyimpan fail. Sila cuba lagi.');
+      }
 
       receiptUrl = `/uploads/receipts/${filename}`;
     } catch (error) {
       console.error('Failed to upload receipt:', error);
-      throw new Error('Gagal memuat naik resit.');
+      throw new Error(error instanceof Error ? error.message : 'Gagal memuat naik resit.');
     }
+  }
+
+  // Ensure receipt was uploaded successfully
+  if (!receiptUrl) {
+    throw new Error('Gagal memuat naik resit. Sila cuba lagi.');
   }
 
   const status = 'APPROVED';
@@ -212,7 +247,7 @@ export async function adminManualPayment(formData: FormData) {
     where: { id: billId },
     data: {
       status,
-      receiptUrl: receiptUrl || bill.receiptUrl, // Keep existing if no new file
+      receiptUrl,
     },
   });
 

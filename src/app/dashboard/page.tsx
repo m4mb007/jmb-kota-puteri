@@ -28,6 +28,9 @@ export default async function DashboardPage() {
         monthlyIncomeAggregate,
         complaintCount,
         pendingActivitiesCount,
+        activeAGMsCount,
+        recentAuditLogs,
+        complaintStatusStats,
       ] =
         await Promise.all([
           prisma.unit.count({
@@ -58,6 +61,18 @@ export default async function DashboardPage() {
           }),
           prisma.activityRequest.count({
             where: { status: 'PENDING' },
+          }),
+          prisma.aGM.count({
+            where: { status: 'ACTIVE' },
+          }),
+          prisma.auditLog.findMany({
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            include: { user: { select: { name: true } } },
+          }),
+          prisma.complaint.groupBy({
+            by: ['status'],
+            _count: { _all: true },
           }),
         ]);
 
@@ -177,6 +192,9 @@ export default async function DashboardPage() {
           pendingActivitiesCount={pendingActivitiesCount}
           upcomingApprovedActivitiesCount={upcomingApprovedActivitiesCount}
           topArrearsUnits={topArrearsUnits}
+          activeAGMsCount={activeAGMsCount}
+          recentAuditLogs={recentAuditLogs}
+          complaintStatusStats={complaintStatusStats.map(s => ({ status: s.status, count: s._count._all }))}
         />
       );
     } else {
@@ -190,6 +208,9 @@ export default async function DashboardPage() {
             { tenantId: userId },
           ],
         },
+        include: {
+          parkings: true,
+        }
       });
 
       const unitIds = units.map((u: any) => u.id as string);
@@ -199,17 +220,33 @@ export default async function DashboardPage() {
         0
       );
 
-      const pendingBills = await prisma.bill.findMany({
-        where: {
-          unitId: { in: unitIds },
-          status: 'PENDING'
-        }
-      });
-
-      const notices = await prisma.notice.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' }
-      });
+      const [pendingBills, notices, activeAGMs, userData] = await Promise.all([
+        prisma.bill.findMany({
+          where: {
+            unitId: { in: unitIds },
+            status: 'PENDING'
+          }
+        }),
+        prisma.notice.findMany({
+          take: 5,
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.aGM.findMany({
+          where: {
+            status: { in: ['ACTIVE', 'DRAFT'] },
+            meetingDate: { gte: new Date() }
+          },
+          orderBy: { meetingDate: 'asc' },
+          take: 3
+        }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            votingEligibilityOverride: true,
+            votingEligibilityReason: true,
+          }
+        })
+      ]);
 
       const systemByUnit = new Map<string, { total: number; count: number }>();
 
@@ -234,6 +271,13 @@ export default async function DashboardPage() {
           _arrearsBillCount: system.count,
         };
       });
+
+      // Check voting eligibility: eligible if no arrears across all units OR override is true
+      const hasArrears = unitsWithArrears.some(u => u._arrearsTotal > 0);
+      let isEligibleToVote = !hasArrears;
+      if (userData?.votingEligibilityOverride !== null && userData?.votingEligibilityOverride !== undefined) {
+        isEligibleToVote = userData.votingEligibilityOverride;
+      }
 
       const nowResident = new Date();
       const [ownActivities, communityActivities] = await Promise.all([
@@ -277,6 +321,9 @@ export default async function DashboardPage() {
           manualArrearsTotal={manualArrearsTotal}
           ownActivities={ownActivities}
           communityActivities={communityActivities}
+          activeAGMs={activeAGMs}
+          isEligibleToVote={isEligibleToVote}
+          votingEligibilityReason={userData?.votingEligibilityReason}
         />
       );
     }

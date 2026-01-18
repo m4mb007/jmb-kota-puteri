@@ -137,11 +137,12 @@ export default async function BillingPage({
             <TableBody>
               {bills.map((bill: {
                 id: string;
-                unit: { unitNumber: string };
+                unit: { unitNumber: string; owner?: any };
                 month: number;
                 year: number;
                 amount: number;
                 status: string;
+                receiptUrl?: string | null;
                 createdAt: Date;
               }) => (
                 <TableRow key={bill.id}>
@@ -149,16 +150,23 @@ export default async function BillingPage({
                   <TableCell>{bill.month}/{bill.year}</TableCell>
                   <TableCell>RM {bill.amount.toFixed(2)}</TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      bill.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                      bill.status === 'PAID' ? 'bg-blue-100 text-blue-800' :
-                      bill.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {bill.status === 'APPROVED' ? 'DIBAYAR' :
-                       bill.status === 'PAID' ? 'MENUNGGU PENGESAHAN' :
-                       bill.status === 'REJECTED' ? 'DITOLAK' : 'BELUM BAYAR'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        bill.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                        bill.status === 'PAID' ? 'bg-blue-100 text-blue-800' :
+                        bill.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {bill.status === 'APPROVED' ? 'DIBAYAR' :
+                         bill.status === 'PAID' ? 'MENUNGGU PENGESAHAN' :
+                         bill.status === 'REJECTED' ? 'DITOLAK' : 'BELUM BAYAR'}
+                      </span>
+                      {bill.receiptUrl && (
+                        <span className="inline-flex items-center text-xs text-slate-500" title="Resit tersedia">
+                          📎
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{bill.createdAt.toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">

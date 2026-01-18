@@ -163,17 +163,64 @@ export async function updateProfile(formData: FormData) {
   const userId = session.user.id;
   const userRole = session.user.role;
 
+  const name = formData.get('name') as string;
+  const email = formData.get('email') as string;
   const phone = formData.get('phone') as string;
   const icNumber = formData.get('icNumber') as string;
   const gender = formData.get('gender') as any;
   const religion = formData.get('religion') as any;
+  
+  const currentPassword = formData.get('currentPassword') as string;
+  const newPassword = formData.get('newPassword') as string;
+  const confirmPassword = formData.get('confirmPassword') as string;
+
+  if (!name) throw new Error('Nama wajib diisi.');
+  if (!phone) throw new Error('No. Telefon wajib diisi.');
+
+  // Validate password change if any password field is filled
+  if (currentPassword || newPassword || confirmPassword) {
+    if (!currentPassword) {
+      throw new Error('Sila masukkan kata laluan semasa untuk menukar kata laluan.');
+    }
+    if (!newPassword) {
+      throw new Error('Sila masukkan kata laluan baru.');
+    }
+    if (newPassword.length < 6) {
+      throw new Error('Kata laluan baru mesti sekurang-kurangnya 6 aksara.');
+    }
+    if (newPassword !== confirmPassword) {
+      throw new Error('Kata laluan baru tidak sepadan.');
+    }
+
+    // Verify current password
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true },
+    });
+    
+    if (!currentUser) {
+      throw new Error('Pengguna tidak dijumpai.');
+    }
+
+    const passwordMatch = await bcrypt.compare(currentPassword, currentUser.password);
+    if (!passwordMatch) {
+      throw new Error('Kata laluan semasa tidak betul.');
+    }
+  }
 
   const data: any = {
+    name,
+    email: email || null,
     phone,
     icNumber: icNumber || null,
     gender: gender || null,
     religion: religion || null,
   };
+
+  // Add hashed new password if changing password
+  if (newPassword) {
+    data.password = await bcrypt.hash(newPassword, 10);
+  }
 
   if (userRole === 'OWNER') {
     const handoverDateStr = formData.get('handoverDate') as string;
@@ -203,13 +250,25 @@ export async function updateProfile(formData: FormData) {
       data,
     });
     
-    await createAuditLog('UPDATE_PROFILE', `User updated profile: ${session.user.name}`);
-  } catch (error) {
+    const auditDetails = newPassword 
+      ? `User updated profile and changed password: ${name}` 
+      : `User updated profile: ${name}`;
+    await createAuditLog('UPDATE_PROFILE', auditDetails);
+  } catch (error: any) {
     console.error('Failed to update profile:', error);
+    if (error.code === 'P2002' && error.meta?.target) {
+      const target = error.meta.target;
+      if (Array.isArray(target)) {
+        if (target.includes('email')) throw new Error('Emel ini telah digunakan.');
+        if (target.includes('phone')) throw new Error('No. Telefon ini telah digunakan.');
+        if (target.includes('icNumber')) throw new Error('No. KP ini telah digunakan.');
+      }
+    }
     throw new Error('Gagal mengemaskini profil.');
   }
 
   revalidatePath('/dashboard/profile');
+  revalidatePath('/dashboard');
 }
 
 export async function updateUser(userId: string, formData: FormData) {

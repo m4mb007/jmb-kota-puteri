@@ -106,6 +106,7 @@ export async function updateUnit(id: string, formData: FormData) {
   const tenantIdRaw = formData.get('tenantId') as string;
   const manualArrearsRaw = formData.get('manualArrearsAmount') as string;
   const monthlyAdjustmentRaw = formData.get('monthlyAdjustmentAmount') as string;
+  const type = formData.get('type') as any;
 
   const ownerId = ownerIdRaw === '_none' ? null : ownerIdRaw;
   const tenantId = tenantIdRaw === '_none' ? null : tenantIdRaw;
@@ -125,6 +126,11 @@ export async function updateUnit(id: string, formData: FormData) {
       manualArrearsAmount,
       monthlyAdjustmentAmount,
     };
+
+    // Add unit type if provided
+    if (type) {
+      updateData.type = type;
+    }
 
     // Handle owner relation - use connect/disconnect pattern
     if (ownerId) {
@@ -153,7 +159,8 @@ export async function updateUnit(id: string, formData: FormData) {
       data: updateData,
     });
 
-    await createAuditLog('UPDATE_UNIT', `Updated unit ${unit.unitNumber}: Owner=${ownerId || 'None'}, Tenant=${tenantId || 'None'}`);
+    const typeInfo = type ? `, Type=${type}` : '';
+    await createAuditLog('UPDATE_UNIT', `Updated unit ${unit.unitNumber}: Owner=${ownerId || 'None'}, Tenant=${tenantId || 'None'}${typeInfo}`);
 
   } catch (error) {
     console.error('Failed to update unit:', error);
