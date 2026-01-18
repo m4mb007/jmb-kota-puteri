@@ -32,25 +32,31 @@ function calculateInstallmentPlans(total: number) {
   });
 }
 
-async function getBaseBillAmount() {
+async function getAverageBillAmount() {
   try {
-    const rows = await prisma.$queryRaw<{ value: string }[]>`
-      SELECT "value"
+    const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
+      SELECT "key", "value"
       FROM "SystemSetting"
-      WHERE "key" = 'BASE_MONTHLY_BILL'
-      LIMIT 1
+      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH')
     `;
 
-    const raw = rows[0]?.value;
-    const parsed = raw ? parseFloat(raw) : NaN;
+    let atas = 95;
+    let bawah = 88;
 
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return 88;
+    for (const row of rows) {
+      const parsed = parseFloat(row.value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        if (row.key === 'BASE_MONTHLY_BILL_ATAS') {
+          atas = parsed;
+        } else if (row.key === 'BASE_MONTHLY_BILL_BAWAH') {
+          bawah = parsed;
+        }
+      }
     }
 
-    return parsed;
+    return (atas + bawah) / 2;
   } catch (error) {
-    return 88;
+    return 91.5; // Average of 95 and 88
   }
 }
 
@@ -118,7 +124,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
 
   const systemArrearsAmount = arrears._sum.amount || 0;
   const totalArrearsAmount = systemArrearsAmount + manualArrearsTotal;
-  const baseBillAmount = await getBaseBillAmount();
+  const avgBillAmount = await getAverageBillAmount();
   const installmentPlans = calculateInstallmentPlans(totalArrearsAmount);
 
   return (
@@ -147,7 +153,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                       Simulasi pelan ansuran tunggakan
                     </div>
                     <div className="mt-1 text-[11px] text-slate-700">
-                      Jika pemilik bayar tambahan setiap bulan di samping bil biasa RM {baseBillAmount.toFixed(2)}:
+                      Jika pemilik bayar tambahan setiap bulan di samping bil biasa RM {avgBillAmount.toFixed(2)}:
                     </div>
                     <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {installmentPlans.map((plan) => (
@@ -160,7 +166,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                               +RM {plan.extra.toFixed(2)} / bulan
                             </div>
                             <div className="text-[10px] text-slate-500">
-                              Tambahan di atas bil bulanan RM 88
+                              Tambahan di atas bil bulanan RM {avgBillAmount.toFixed(2)}
                             </div>
                           </div>
                           <div className="text-right">

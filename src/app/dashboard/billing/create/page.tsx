@@ -16,25 +16,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const dynamic = 'force-dynamic';
 
-async function getBaseBillAmount() {
+async function getBaseBillAmounts() {
   try {
-    const rows = await prisma.$queryRaw<{ value: string }[]>`
-      SELECT "value"
+    const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
+      SELECT "key", "value"
       FROM "SystemSetting"
-      WHERE "key" = 'BASE_MONTHLY_BILL'
-      LIMIT 1
+      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH')
     `;
 
-    const raw = rows[0]?.value;
-    const parsed = raw ? parseFloat(raw) : NaN;
+    let atas = 95;
+    let bawah = 88;
 
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return 88;
+    for (const row of rows) {
+      const parsed = parseFloat(row.value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        if (row.key === 'BASE_MONTHLY_BILL_ATAS') {
+          atas = parsed;
+        } else if (row.key === 'BASE_MONTHLY_BILL_BAWAH') {
+          bawah = parsed;
+        }
+      }
     }
 
-    return parsed;
+    return { atas, bawah };
   } catch (error) {
-    return 88;
+    return { atas: 95, bawah: 88 };
   }
 }
 
@@ -48,7 +54,7 @@ export default async function CreateBillPage() {
     orderBy: { unitNumber: 'asc' },
   });
 
-  const baseBillAmount = await getBaseBillAmount();
+  const baseBillAmounts = await getBaseBillAmounts();
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 1 + i); // Last year to next 3 years
@@ -71,7 +77,7 @@ export default async function CreateBillPage() {
                 <SelectContent>
                   {units.map((unit: any) => (
                     <SelectItem key={unit.id} value={unit.id}>
-                      {unit.unitNumber}
+                      {unit.unitNumber} ({unit.type === 'ATAS' ? 'Atas' : 'Bawah'})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -86,9 +92,12 @@ export default async function CreateBillPage() {
                 type="number" 
                 step="0.01" 
                 placeholder="0.00" 
-                defaultValue={baseBillAmount.toFixed(2)}
+                defaultValue={baseBillAmounts.bawah.toFixed(2)}
                 required 
               />
+              <p className="text-xs text-muted-foreground">
+                Kadar asas: Unit Atas RM {baseBillAmounts.atas.toFixed(2)} | Unit Bawah RM {baseBillAmounts.bawah.toFixed(2)}
+              </p>
             </div>
 
             <div className="space-y-2">

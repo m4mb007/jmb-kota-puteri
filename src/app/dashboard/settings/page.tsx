@@ -11,25 +11,31 @@ import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-async function getBaseBillAmount() {
+async function getBaseBillAmounts() {
   try {
-    const rows = await prisma.$queryRaw<{ value: string }[]>`
-      SELECT "value"
+    const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
+      SELECT "key", "value"
       FROM "SystemSetting"
-      WHERE "key" = 'BASE_MONTHLY_BILL'
-      LIMIT 1
+      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH')
     `;
 
-    const raw = rows[0]?.value;
-    const parsed = raw ? parseFloat(raw) : NaN;
+    let atas = 95;
+    let bawah = 88;
 
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return 88;
+    for (const row of rows) {
+      const parsed = parseFloat(row.value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        if (row.key === 'BASE_MONTHLY_BILL_ATAS') {
+          atas = parsed;
+        } else if (row.key === 'BASE_MONTHLY_BILL_BAWAH') {
+          bawah = parsed;
+        }
+      }
     }
 
-    return parsed;
+    return { atas, bawah };
   } catch (error) {
-    return 88;
+    return { atas: 95, bawah: 88 };
   }
 }
 
@@ -41,20 +47,30 @@ async function updateBaseBill(formData: FormData) {
     throw new Error('Tidak dibenarkan');
   }
 
-  const rawValue = String(formData.get('baseBill') || '').trim().replace(',', '.');
-  const amount = parseFloat(rawValue);
+  const rawValueAtas = String(formData.get('baseBillAtas') || '').trim().replace(',', '.');
+  const rawValueBawah = String(formData.get('baseBillBawah') || '').trim().replace(',', '.');
+  
+  const amountAtas = parseFloat(rawValueAtas);
+  const amountBawah = parseFloat(rawValueBawah);
 
-  if (!Number.isFinite(amount) || amount <= 0) {
+  if (!Number.isFinite(amountAtas) || amountAtas <= 0 || !Number.isFinite(amountBawah) || amountBawah <= 0) {
     return;
   }
 
-  const valueString = amount.toFixed(2);
+  const valueStringAtas = amountAtas.toFixed(2);
+  const valueStringBawah = amountBawah.toFixed(2);
 
   try {
     await prisma.$executeRaw`
       INSERT INTO "SystemSetting" ("id", "key", "value", "createdAt", "updatedAt")
-      VALUES (${randomUUID()}, 'BASE_MONTHLY_BILL', ${valueString}, NOW(), NOW())
-      ON CONFLICT ("key") DO UPDATE SET "value" = ${valueString}, "updatedAt" = NOW()
+      VALUES (${randomUUID()}, 'BASE_MONTHLY_BILL_ATAS', ${valueStringAtas}, NOW(), NOW())
+      ON CONFLICT ("key") DO UPDATE SET "value" = ${valueStringAtas}, "updatedAt" = NOW()
+    `;
+    
+    await prisma.$executeRaw`
+      INSERT INTO "SystemSetting" ("id", "key", "value", "createdAt", "updatedAt")
+      VALUES (${randomUUID()}, 'BASE_MONTHLY_BILL_BAWAH', ${valueStringBawah}, NOW(), NOW())
+      ON CONFLICT ("key") DO UPDATE SET "value" = ${valueStringBawah}, "updatedAt" = NOW()
     `;
   } catch (error: any) {
     // Extract PostgreSQL error code from Prisma error
@@ -91,7 +107,7 @@ async function updateBaseBill(formData: FormData) {
         ? 'permission denied' 
         : 'table does not exist';
       console.error(
-        `SystemSetting table access error (${errorType}); BASE_MONTHLY_BILL change was not persisted.`
+        `SystemSetting table access error (${errorType}); billing settings change was not persisted.`
       );
       return;
     }
@@ -101,6 +117,7 @@ async function updateBaseBill(formData: FormData) {
   revalidatePath('/dashboard/settings');
   revalidatePath('/dashboard/profile');
   revalidatePath('/dashboard/users');
+  revalidatePath('/dashboard/billing');
 }
 
 export default async function SettingsPage() {
@@ -110,14 +127,14 @@ export default async function SettingsPage() {
   }
 
   const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role);
-  const baseBillAmount = await getBaseBillAmount();
+  const baseBillAmounts = await getBaseBillAmounts();
 
   return (
     <div className="max-w-xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tetapan Sistem</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Ubah suai nilai asas bil penyelenggaraan bulanan.
+          Ubah suai nilai asas bil penyelenggaraan bulanan mengikut jenis unit.
         </p>
       </div>
 
@@ -128,7 +145,8 @@ export default async function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-1 text-sm text-muted-foreground">
             <div>
-              Nilai ini digunakan sebagai bil asas bulanan (contoh bil RM {baseBillAmount.toFixed(2)})
+              Nilai ini digunakan sebagai bil asas bulanan untuk setiap jenis unit 
+              (Unit Atas: RM {baseBillAmounts.atas.toFixed(2)}, Unit Bawah: RM {baseBillAmounts.bawah.toFixed(2)})
               dan sebagai rujukan dalam simulasi pelan ansuran tunggakan.
             </div>
           </div>
@@ -136,14 +154,25 @@ export default async function SettingsPage() {
           {isManagement ? (
             <form action={updateBaseBill} className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="baseBill">Jumlah bil bulanan asas (RM)</Label>
+                <Label htmlFor="baseBillAtas">Jumlah bil bulanan Unit Atas (RM)</Label>
                 <Input
-                  id="baseBill"
-                  name="baseBill"
+                  id="baseBillAtas"
+                  name="baseBillAtas"
                   type="number"
                   step="0.01"
                   min="0"
-                  defaultValue={baseBillAmount.toFixed(2)}
+                  defaultValue={baseBillAmounts.atas.toFixed(2)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="baseBillBawah">Jumlah bil bulanan Unit Bawah (RM)</Label>
+                <Input
+                  id="baseBillBawah"
+                  name="baseBillBawah"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={baseBillAmounts.bawah.toFixed(2)}
                 />
               </div>
               <Button type="submit">
@@ -151,14 +180,24 @@ export default async function SettingsPage() {
               </Button>
             </form>
           ) : (
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Bil bulanan asas semasa</span>
-                <span className="font-semibold">
-                  RM {baseBillAmount.toFixed(2)}
-                </span>
+            <div className="space-y-2">
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span>Bil bulanan Unit Atas</span>
+                  <span className="font-semibold">
+                    RM {baseBillAmounts.atas.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span>Bil bulanan Unit Bawah</span>
+                  <span className="font-semibold">
+                    RM {baseBillAmounts.bawah.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
                 Hanya pihak pengurusan boleh mengubah tetapan ini.
               </div>
             </div>

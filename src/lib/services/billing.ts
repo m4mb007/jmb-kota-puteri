@@ -10,21 +10,30 @@ export async function generateBillsLogic(month: number, year: number) {
     },
   });
 
-  let baseAmount = 88;
+  // Fetch base amounts for different unit types
+  let baseAmountAtas = 95;  // Default for ATAS (upper)
+  let baseAmountBawah = 88; // Default for BAWAH (lower)
 
   try {
-    const rows = await prisma.$queryRaw<{ value: string }[]>`
-      SELECT "value"
+    const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
+      SELECT "key", "value"
       FROM "SystemSetting"
-      WHERE "key" = 'BASE_MONTHLY_BILL'
-      LIMIT 1
+      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH')
     `;
 
-    const raw = rows[0]?.value;
-    const parsed = raw ? parseFloat(raw) : NaN;
-    baseAmount = !Number.isFinite(parsed) || parsed <= 0 ? 88 : parsed;
+    for (const row of rows) {
+      const parsed = parseFloat(row.value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        if (row.key === 'BASE_MONTHLY_BILL_ATAS') {
+          baseAmountAtas = parsed;
+        } else if (row.key === 'BASE_MONTHLY_BILL_BAWAH') {
+          baseAmountBawah = parsed;
+        }
+      }
+    }
   } catch (error) {
-    baseAmount = 88;
+    // Use defaults if query fails
+    console.error('Error fetching billing settings:', error);
   }
 
   let createdCount = 0;
@@ -39,6 +48,9 @@ export async function generateBillsLogic(month: number, year: number) {
     });
 
     if (!existingBill) {
+      // Select base amount based on unit type
+      const baseAmount = unit.type === 'ATAS' ? baseAmountAtas : baseAmountBawah;
+      
       // Calculate bill amount: baseAmount + unit's monthly adjustment
       const unitAdjustment = unit.monthlyAdjustmentAmount || 0;
       const billAmount = baseAmount + unitAdjustment;

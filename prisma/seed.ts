@@ -127,6 +127,24 @@ async function main() {
   }
   console.log('Seeded Expense Categories')
 
+  // 8. Seed System Settings for Billing
+  const systemSettings = [
+    { key: 'BASE_MONTHLY_BILL_ATAS', value: '95' },   // Upper level units
+    { key: 'BASE_MONTHLY_BILL_BAWAH', value: '88' },  // Lower level units
+  ]
+
+  for (const setting of systemSettings) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: { value: setting.value },
+      create: {
+        key: setting.key,
+        value: setting.value,
+      },
+    })
+  }
+  console.log('Seeded System Settings for different unit types')
+
   console.log('Seeding finished.')
 }
 
