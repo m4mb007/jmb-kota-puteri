@@ -85,6 +85,18 @@ enum ActivityStatus {
   CANCELLED
 }
 
+enum AGMStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum VoteChoice {
+  SETUJU
+  TIDAK_SETUJU
+  BERKECUALI
+}
+
 model User {
   id        String    @id @default(cuid())
   email     String?   @unique
@@ -127,6 +139,10 @@ model User {
   approvedExpenses Expense[] @relation("ExpenseApprover")
   activityRequests ActivityRequest[] @relation("ActivityCreator")
   approvedActivities ActivityRequest[] @relation("ActivityApprover")
+  
+  // AGM & Voting
+  createdAGMs AGM[] @relation("AGMCreator")
+  votes       Vote[] @relation("VoteCaster")
 }
 
 model Lot {
@@ -157,6 +173,7 @@ model Unit {
   manualArrearsAmount Float     @default(0)
   monthlyAdjustmentAmount Float @default(0)
   activityRequests    ActivityRequest[]
+  votes               Vote[]
 }
 
 model Parking {
@@ -306,4 +323,53 @@ model SystemSetting {
   value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AGM {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  meetingDate DateTime
+  status      AGMStatus  @default(DRAFT)
+  
+  createdById String
+  createdBy   User       @relation("AGMCreator", fields: [createdById], references: [id])
+  
+  resolutions AGMResolution[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model AGMResolution {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  
+  agmId       String
+  agm         AGM      @relation(fields: [agmId], references: [id], onDelete: Cascade)
+  
+  votes       Vote[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vote {
+  id           String        @id @default(cuid())
+  choice       VoteChoice
+  
+  resolutionId String
+  resolution   AGMResolution @relation(fields: [resolutionId], references: [id], onDelete: Cascade)
+  
+  userId       String
+  user         User          @relation("VoteCaster", fields: [userId], references: [id])
+  
+  unitId       String?
+  unit         Unit?         @relation(fields: [unitId], references: [id])
+  
+  createdAt    DateTime      @default(now())
+  
+  @@unique([resolutionId, userId])
 }

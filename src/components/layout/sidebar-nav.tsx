@@ -15,6 +15,7 @@ import {
   Users,
   Users2,
   CalendarRange,
+  Vote,
 } from 'lucide-react';
 
 interface SidebarNavProps {
@@ -89,6 +90,12 @@ const navGroups = [
         title: 'AJK & Komuniti',
         href: '/dashboard/committee',
         icon: Users2,
+        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'OWNER', 'TENANT'],
+      },
+      {
+        title: 'AGM & Undi',
+        href: '/dashboard/agm',
+        icon: Vote,
         roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'OWNER', 'TENANT'],
       },
     ]

@@ -145,6 +145,45 @@ async function main() {
   }
   console.log('Seeded System Settings for different unit types')
 
+  // 9. Seed Sample AGM
+  const sampleAGM = await prisma.aGM.upsert({
+    where: { id: 'sample-agm-2026' },
+    update: {},
+    create: {
+      id: 'sample-agm-2026',
+      title: 'Mesyuarat Agung Tahunan 2026',
+      description: 'AGM tahunan untuk membincangkan hal ehwal pengurusan strata',
+      meetingDate: new Date('2026-03-15T14:00:00'),
+      status: 'ACTIVE',
+      createdById: admin.id,
+      resolutions: {
+        create: [
+          {
+            title: 'Kelulusan Penyata Kewangan Tahun 2025',
+            description: 'Meluluskan penyata kewangan yang telah diaudit untuk tahun berakhir 31 Disember 2025',
+            order: 0,
+          },
+          {
+            title: 'Kelulusan Belanjawan Tahun 2026',
+            description: 'Meluluskan belanjawan operasi dan penyelenggaraan untuk tahun 2026',
+            order: 1,
+          },
+          {
+            title: 'Pelantikan Juruaudit Tahun 2026',
+            description: 'Melantik syarikat audit untuk mengaudit penyata kewangan tahun 2026',
+            order: 2,
+          },
+          {
+            title: 'Cadangan Peningkatan Keselamatan',
+            description: 'Meluluskan pemasangan sistem CCTV tambahan di kawasan parkir',
+            order: 3,
+          },
+        ],
+      },
+    },
+  })
+  console.log(`Created sample AGM: ${sampleAGM.title}`)
+
   console.log('Seeding finished.')
 }
 
