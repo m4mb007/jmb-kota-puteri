@@ -24,11 +24,12 @@ export async function GET() {
     }> = [];
 
     // Get recent notices
+    const targetAudience = isManagement ? 'MANAGEMENT' : 'RESIDENTS';
     const notices = await prisma.notice.findMany({
       where: {
         OR: [
           { target: 'ALL' },
-          isManagement ? { target: 'MANAGEMENT' } : { target: 'RESIDENTS' },
+          { target: targetAudience },
         ],
       },
       orderBy: { createdAt: 'desc' },
