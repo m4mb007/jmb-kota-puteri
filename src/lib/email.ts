@@ -24,7 +24,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
   try {
     console.log('📧 Attempting to send email via Resend...');
     const data = await resend.emails.send({
-      from: 'JMB Idaman Kota Puteri <onboarding@resend.dev>',
+      from: 'JMB Idaman Kota Puteri <noreply@whispererwolf.site>',
       to,
       subject,
       html,
