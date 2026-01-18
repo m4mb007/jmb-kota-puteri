@@ -9,23 +9,31 @@ interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: EmailOptions) {
+  console.log('=== EMAIL SEND ATTEMPT ===');
+  console.log('To:', to);
+  console.log('Subject:', subject);
+  console.log('API Key configured:', !!process.env.RESEND_API_KEY);
+  console.log('API Key starts with re_123:', process.env.RESEND_API_KEY?.startsWith('re_123'));
+  
   if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.startsWith('re_123')) {
-    console.log('Resend API Key not configured or is placeholder. Skipping email.');
+    console.log('❌ Resend API Key not configured or is placeholder. Skipping email.');
     console.log(`To: ${to}, Subject: ${subject}`);
     return;
   }
 
   try {
+    console.log('📧 Attempting to send email via Resend...');
     const data = await resend.emails.send({
       from: 'JMB Idaman Kota Puteri <onboarding@resend.dev>',
       to,
       subject,
       html,
     });
-    console.log('Email sent:', data);
+    console.log('✅ Email sent successfully:', data);
     return data;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('❌ Error sending email:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     // Don't throw error to prevent blocking the main flow
     return null;
   }

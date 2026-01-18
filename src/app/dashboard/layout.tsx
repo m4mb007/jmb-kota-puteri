@@ -1,5 +1,7 @@
 import { Sidebar } from '@/components/layout/sidebar';
-import { Menu, Search, Bell } from 'lucide-react';
+import { SearchBar } from '@/components/layout/search-bar';
+import { NotificationBell } from '@/components/layout/notification-bell';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
@@ -24,21 +26,13 @@ export default function DashboardLayout({
               <Menu className="h-5 w-5" />
             </Button>
             
-            <div className="hidden md:flex items-center gap-2 max-w-md w-full relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Cari unit, nama, atau no. telefon..." 
-                className="w-full bg-slate-100/50 border-none rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/10 focus:bg-white transition-all outline-none"
-              />
+            <div className="hidden md:flex items-center gap-2 max-w-md w-full">
+              <SearchBar />
             </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <Button variant="ghost" size="icon" className="relative text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
-            </Button>
+            <NotificationBell />
             
             <div className="h-8 w-px bg-slate-200 hidden md:block" />
             

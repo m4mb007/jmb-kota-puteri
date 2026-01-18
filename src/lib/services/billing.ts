@@ -53,12 +53,20 @@ export async function generateBillsLogic(month: number, year: number) {
         },
       });
 
+      // Send notifications
+      console.log(`📧 Checking notification for Unit ${unit.unitNumber}...`);
+      console.log(`Owner email: ${unit.owner?.email || 'NOT SET'}`);
+      console.log(`Owner phone: ${unit.owner?.phone || 'NOT SET'}`);
+      
       if (unit.owner?.email) {
+        console.log(`✉️ Sending email to ${unit.owner.email} for unit ${unit.unitNumber}`);
         await sendEmail({
           to: unit.owner.email,
           subject: `Invois Baharu - ${unit.unitNumber} (${month}/${year})`,
           html: EMAIL_TEMPLATES.billCreated(unit.unitNumber, billAmount, month, year),
         });
+      } else {
+        console.log(`⚠️ No email address for unit ${unit.unitNumber} - skipping email notification`);
       }
 
       if (unit.owner?.phone) {

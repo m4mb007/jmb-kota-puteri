@@ -333,12 +333,18 @@ export async function createBill(formData: FormData) {
     await createAuditLog('CREATE_BILL', `Created bill for Unit ID ${unitId}: RM${finalAmount} (Base: RM${enteredAmount} + Adjustment: RM${unitAdjustment})`);
 
     // Send email to owner
+    console.log(`📧 Bill created for Unit ${bill.unit.unitNumber}`);
+    console.log(`Owner email: ${bill.unit.owner?.email || 'NOT SET'}`);
+    
     if (bill.unit.owner?.email) {
+      console.log(`✉️ Sending bill notification email to ${bill.unit.owner.email}`);
       await sendEmail({
         to: bill.unit.owner.email,
         subject: `Invois Baharu - ${bill.unit.unitNumber} (${month}/${year})`,
         html: EMAIL_TEMPLATES.billCreated(bill.unit.unitNumber, finalAmount, month, year),
       });
+    } else {
+      console.log(`⚠️ No email address for unit ${bill.unit.unitNumber} - skipping email notification`);
     }
 
   } catch (error) {
