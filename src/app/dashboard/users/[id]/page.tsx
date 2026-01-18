@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Mail, Phone, User as UserIcon, Building2 } from 'lucide-react';
 import { Metadata } from 'next';
+import { VotingEligibilityCard } from './voting-eligibility-card';
+import { checkVotingEligibility } from '@/lib/actions/agm';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +128,9 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   const totalArrearsAmount = systemArrearsAmount + manualArrearsTotal;
   const avgBillAmount = await getAverageBillAmount();
   const installmentPlans = calculateInstallmentPlans(totalArrearsAmount);
+
+  // Check voting eligibility
+  const votingEligibility = await checkVotingEligibility(id);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -287,6 +292,22 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
             )}
           </CardContent>
         </Card>
+
+        {/* Voting Eligibility Card */}
+        {['OWNER', 'TENANT'].includes(user.role) && (
+          <VotingEligibilityCard
+            user={{
+              id: user.id,
+              name: user.name,
+              votingEligibilityOverride: user.votingEligibilityOverride,
+              votingEligibilityReason: user.votingEligibilityReason,
+              votingEligibilitySetAt: user.votingEligibilitySetAt,
+            }}
+            systemEligible={totalArrearsAmount === 0}
+            arrearsAmount={totalArrearsAmount}
+            isJMB={['SUPER_ADMIN', 'JMB'].includes(session.user.role)}
+          />
+        )}
       </div>
     </div>
   );

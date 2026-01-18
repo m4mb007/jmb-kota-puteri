@@ -135,9 +135,18 @@ export default async function AGMDetailPage({ params }: { params: Promise<{ id: 
                   <p className="text-green-800 font-medium">
                     ✅ Anda layak mengundi dalam AGM ini
                   </p>
-                  <p className="text-sm text-green-700 mt-1">
-                    Tiada tunggakan. Sila undi pada resolusi di bawah.
-                  </p>
+                  {eligibility.isManualOverride ? (
+                    <div className="mt-2">
+                      <Badge variant="outline" className="mb-2">Kelulusan Khas JMB</Badge>
+                      <p className="text-sm text-green-700">
+                        {eligibility.overrideReason}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-green-700 mt-1">
+                      Tiada tunggakan. Sila undi pada resolusi di bawah.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -152,17 +161,28 @@ export default async function AGMDetailPage({ params }: { params: Promise<{ id: 
                 <p className="text-red-800 font-medium">
                   ❌ Anda tidak layak mengundi
                 </p>
-                <p className="text-sm text-red-700 mt-1">
-                  {eligibility.reason}
-                </p>
-                {eligibility.arrearsAmount && eligibility.arrearsAmount > 0 && (
-                  <div className="mt-3">
-                    <Link href="/dashboard/billing">
-                      <Button size="sm" variant="outline">
-                        Lihat & Bayar Tunggakan
-                      </Button>
-                    </Link>
+                {eligibility.isManualOverride ? (
+                  <div className="mt-2">
+                    <Badge variant="outline" className="mb-2">Keputusan JMB</Badge>
+                    <p className="text-sm text-red-700">
+                      {eligibility.reason}
+                    </p>
                   </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-red-700 mt-1">
+                      {eligibility.reason}
+                    </p>
+                    {eligibility.arrearsAmount && eligibility.arrearsAmount > 0 && (
+                      <div className="mt-3">
+                        <Link href="/dashboard/billing">
+                          <Button size="sm" variant="outline">
+                            Lihat & Bayar Tunggakan
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

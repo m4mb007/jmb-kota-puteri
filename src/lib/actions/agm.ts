@@ -7,15 +7,43 @@ import { createAuditLog } from './audit';
 
 /**
  * Check if a user is eligible to vote
- * User is NOT eligible if they have any arrears (tunggakan)
+ * Priority: Manual override by JMB > System check (arrears)
  */
 export async function checkVotingEligibility(userId: string): Promise<{
   eligible: boolean;
   reason?: string;
   arrearsAmount?: number;
+  isManualOverride?: boolean;
+  overrideReason?: string;
 }> {
   try {
-    // Get user's units
+    // Check for manual override by JMB first
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        votingEligibilityOverride: true,
+        votingEligibilityReason: true,
+      },
+    });
+
+    // If JMB has manually set eligibility, respect that decision
+    if (user?.votingEligibilityOverride !== null && user?.votingEligibilityOverride !== undefined) {
+      if (user.votingEligibilityOverride === true) {
+        return {
+          eligible: true,
+          isManualOverride: true,
+          overrideReason: user.votingEligibilityReason || 'Diluluskan oleh JMB',
+        };
+      } else {
+        return {
+          eligible: false,
+          reason: user.votingEligibilityReason || 'Tidak dibenarkan oleh JMB',
+          isManualOverride: true,
+        };
+      }
+    }
+
+    // Otherwise, check system rules (arrears)
     const units = await prisma.unit.findMany({
       where: {
         OR: [
@@ -434,5 +462,51 @@ export async function getAGMResults(agmId: string) {
     agm,
     results,
   };
+}
+
+/**
+ * Set voting eligibility override for a user (JMB only)
+ */
+export async function setVotingEligibilityOverride(
+  userId: string,
+  eligible: boolean | null,
+  reason?: string
+) {
+  const session = await auth();
+  if (!session?.user?.id || !['SUPER_ADMIN', 'JMB'].includes(session.user.role)) {
+    throw new Error('Tidak dibenarkan');
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+
+  if (!user) {
+    throw new Error('Pengguna tidak dijumpai');
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      votingEligibilityOverride: eligible,
+      votingEligibilityReason: reason || null,
+      votingEligibilitySetBy: eligible !== null ? session.user.id : null,
+      votingEligibilitySetAt: eligible !== null ? new Date() : null,
+    },
+  });
+
+  const action = 
+    eligible === true ? 'LAYAK (manual)' :
+    eligible === false ? 'TIDAK LAYAK (manual)' :
+    'RESET (ikut sistem)';
+
+  await createAuditLog(
+    'SET_VOTING_ELIGIBILITY',
+    `Tetapkan kelayakan undi untuk ${user.name}: ${action}${reason ? ` - ${reason}` : ''}`
+  );
+
+  revalidatePath('/dashboard/users');
+  revalidatePath(`/dashboard/users/${userId}`);
 }
 

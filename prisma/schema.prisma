@@ -122,6 +122,12 @@ model User {
   committeeType CommitteeType?
   committeePosition String?
 
+  // Voting Eligibility Override
+  votingEligibilityOverride Boolean?  // true = layak walaupun ada tunggakan, false = tidak layak walaupun tiada tunggakan, null = ikut sistem
+  votingEligibilityReason   String?   // Sebab JMB beri override (contoh: "Mengikut pelan ansuran bulanan")
+  votingEligibilitySetBy    String?   // ID JMB yang tetapkan override
+  votingEligibilitySetAt    DateTime? // Bila override ditetapkan
+
   isActive  Boolean   @default(true)
   deletedAt DateTime?
 
