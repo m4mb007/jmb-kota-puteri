@@ -23,15 +23,43 @@ export async function GET() {
       link?: string;
     }> = [];
 
+    // Get user units once for residents (used for both notices and bills)
+    let userUnits: Array<{ id: string; type: string }> = [];
+    if (!isManagement) {
+      userUnits = await prisma.unit.findMany({
+        where: {
+          OR: [
+            { ownerId: userId },
+            { tenantId: userId },
+          ],
+        },
+        select: { id: true, type: true },
+      });
+    }
+
     // Get recent notices
-    const targetAudience = isManagement ? 'MANAGEMENT' : 'RESIDENTS';
+    let noticeWhere: any = {};
+    
+    if (isManagement) {
+      // Management sees all notices
+      noticeWhere = {};
+    } else {
+      // Residents see notices for ALL, plus their unit type if applicable
+      const unitTypes = [...new Set(userUnits.map(u => u.type))];
+      const targets: any[] = [{ target: 'ALL' }];
+      
+      if (unitTypes.includes('ATAS')) {
+        targets.push({ target: 'ATAS_ONLY' });
+      }
+      if (unitTypes.includes('BAWAH')) {
+        targets.push({ target: 'BAWAH_ONLY' });
+      }
+      
+      noticeWhere = { OR: targets };
+    }
+    
     const notices = await prisma.notice.findMany({
-      where: {
-        OR: [
-          { target: 'ALL' },
-          { target: targetAudience },
-        ],
-      },
+      where: noticeWhere,
       orderBy: { createdAt: 'desc' },
       take: 5,
     });
@@ -93,17 +121,7 @@ export async function GET() {
         });
       });
     } else {
-      // For residents: pending bills
-      const userUnits = await prisma.unit.findMany({
-        where: {
-          OR: [
-            { ownerId: userId },
-            { tenantId: userId },
-          ],
-        },
-        select: { id: true },
-      });
-
+      // For residents: pending bills (using userUnits fetched earlier)
       const unitIds = userUnits.map(u => u.id);
 
       if (unitIds.length > 0) {
