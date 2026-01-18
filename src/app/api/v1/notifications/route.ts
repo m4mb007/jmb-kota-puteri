@@ -105,7 +105,7 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
         take: 3,
         include: {
-          reportedBy: true,
+          user: true,
         },
       });
 
@@ -113,7 +113,7 @@ export async function GET() {
         notifications.push({
           id: `complaint-${complaint.id}`,
           title: 'Aduan Baharu',
-          message: `${complaint.reportedBy.name}: ${complaint.description.substring(0, 50)}...`,
+          message: `${complaint.user.name}: ${complaint.description.substring(0, 50)}...`,
           type: 'complaint',
           isRead: false,
           createdAt: complaint.createdAt.toISOString(),
