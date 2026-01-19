@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { createAuditLog } from './audit';
+import { AGMStatus, VoteChoice } from '@prisma/client';
 
 /**
  * Check if a user is eligible to vote
@@ -119,7 +120,7 @@ export async function createAGM(formData: FormData) {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const meetingDate = formData.get('meetingDate') as string;
-  const status = (formData.get('status') as string) || 'DRAFT';
+  const status = (formData.get('status') as AGMStatus) || 'DRAFT';
 
   if (!title || !meetingDate) {
     throw new Error('Sila isi semua maklumat yang diperlukan');
@@ -146,7 +147,7 @@ export async function createAGM(formData: FormData) {
       title,
       description: description || undefined,
       meetingDate: new Date(meetingDate),
-      status: status as any,
+      status: status,
       createdById: session.user.id,
       resolutions: {
         create: resolutions,
@@ -178,7 +179,7 @@ export async function updateAGM(id: string, formData: FormData) {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const meetingDate = formData.get('meetingDate') as string;
-  const status = formData.get('status') as string;
+  const status = formData.get('status') as AGMStatus;
 
   if (!title || !meetingDate) {
     throw new Error('Sila isi semua maklumat yang diperlukan');
@@ -190,7 +191,7 @@ export async function updateAGM(id: string, formData: FormData) {
       title,
       description: description || undefined,
       meetingDate: new Date(meetingDate),
-      status: status as any,
+      status: status,
     },
   });
 
@@ -207,7 +208,7 @@ export async function updateAGM(id: string, formData: FormData) {
 /**
  * Update AGM status
  */
-export async function updateAGMStatus(id: string, status: 'DRAFT' | 'ACTIVE' | 'CLOSED') {
+export async function updateAGMStatus(id: string, status: AGMStatus) {
   const session = await auth();
   if (!session?.user?.id || !['SUPER_ADMIN', 'JMB'].includes(session.user.role)) {
     throw new Error('Tidak dibenarkan');
@@ -335,7 +336,7 @@ export async function deleteResolution(id: string) {
 /**
  * Cast a vote
  */
-export async function castVote(resolutionId: string, choice: 'SETUJU' | 'TIDAK_SETUJU' | 'BERKECUALI') {
+export async function castVote(resolutionId: string, choice: VoteChoice) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Sila log masuk');

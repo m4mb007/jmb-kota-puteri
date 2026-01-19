@@ -1,18 +1,52 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Home, FileText, Megaphone, ArrowRight, CalendarRange, Clock, CreditCard, BellRing, Info, Car, ShieldCheck, ShieldAlert, Gavel } from 'lucide-react';
+import { Home, Megaphone, ArrowRight, CalendarRange, Clock, CreditCard, BellRing, Info, Car, ShieldCheck, ShieldAlert, Gavel } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface UnitForResident {
+  id: string;
+  unitNumber: string;
+  type: string;
+  parkings?: { id: string; number: string }[];
+  _arrearsTotal?: number | null;
+}
+
+interface BillForResident {
+  id: string;
+  amount: number | string | null;
+}
+
+interface NoticeForResident {
+  id: string;
+  title: string;
+  createdAt: string | Date;
+  category?: string | null;
+  content: string | null;
+}
+
+interface ActivityForResident {
+  id: string;
+  date: string | Date;
+  title: string;
+  location?: string | null;
+}
+
+interface AgmForResident {
+  id: string;
+  meetingDate: string | Date;
+  title: string;
+}
+
 interface ResidentDashboardProps {
-  units: any[];
-  pendingBills: any[];
-  notices: any[];
+  units: UnitForResident[];
+  pendingBills: BillForResident[];
+  notices: NoticeForResident[];
   userName: string;
   manualArrearsTotal: number;
-  ownActivities: any[];
-  communityActivities: any[];
-  activeAGMs?: any[];
+  ownActivities: ActivityForResident[];
+  communityActivities: ActivityForResident[];
+  activeAGMs?: AgmForResident[];
   isEligibleToVote?: boolean;
   votingEligibilityReason?: string | null;
 }
@@ -35,7 +69,6 @@ export function ResidentDashboard({
   );
   const totalPending = systemPending + (manualArrearsTotal || 0);
   const pendingBillsCount = pendingBills.length;
-  const upcomingActivitiesCount = ownActivities.length + communityActivities.length;
 
   const totalParking = units.reduce((acc, unit) => acc + (unit.parkings?.length || 0), 0);
 
@@ -113,10 +146,10 @@ export function ResidentDashboard({
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                             {unit.type}
                           </span>
-                          {unit.parkings?.length > 0 && (
+                          {(unit.parkings?.length || 0) > 0 && (
                             <div className="flex items-center gap-1 text-[10px] font-bold text-blue-500">
                               <Car className="w-3 h-3" />
-                              <span>{unit.parkings.length}</span>
+                              <span>{unit.parkings?.length || 0}</span>
                             </div>
                           )}
                         </div>
@@ -413,7 +446,7 @@ export function ResidentDashboard({
                         </div>
                       </div>
                       <p className="text-xs font-medium text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                        {notice.content.replace(/<[^>]*>?/gm, '')}
+                        {(notice.content ?? '').replace(/<[^>]*>?/gm, '')}
                       </p>
                     </Link>
                   ))

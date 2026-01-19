@@ -27,11 +27,13 @@ async function grantPermissions() {
     try {
       const result = await pool.query('SELECT COUNT(*) FROM "SystemSetting"')
       console.log(`✓ Can now query table (${result.rows[0].count} rows)`)
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { message: string };
       console.log(`✗ Still cannot query table: ${error.message}`)
     }
     
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as { message: string; code?: string };
     console.error('Error granting permissions:', error.message)
     console.error('Error code:', error.code)
     console.error('\nThis likely means you need database admin privileges.')

@@ -50,7 +50,7 @@ async function getAverageBillAmount() {
     }
 
     return (atas + bawah) / 2;
-  } catch (error) {
+  } catch {
     return 91.5; // Average of 95 and 88
   }
 }

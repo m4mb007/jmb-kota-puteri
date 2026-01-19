@@ -16,11 +16,12 @@ async function getBaseBillAmounts() {
     const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
       SELECT "key", "value"
       FROM "SystemSetting"
-      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH')
+      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH', 'SINKING_FUND_PERCENT')
     `;
 
     let atas = 95;
     let bawah = 88;
+    let sinkingPercent = 10;
 
     for (const row of rows) {
       const parsed = parseFloat(row.value);
@@ -29,13 +30,15 @@ async function getBaseBillAmounts() {
           atas = parsed;
         } else if (row.key === 'BASE_MONTHLY_BILL_BAWAH') {
           bawah = parsed;
+        } else if (row.key === 'SINKING_FUND_PERCENT') {
+          sinkingPercent = parsed;
         }
       }
     }
 
-    return { atas, bawah };
+    return { atas, bawah, sinkingPercent };
   } catch (error) {
-    return { atas: 95, bawah: 88 };
+    return { atas: 95, bawah: 88, sinkingPercent: 10 };
   }
 }
 
@@ -49,16 +52,26 @@ async function updateBaseBill(formData: FormData) {
 
   const rawValueAtas = String(formData.get('baseBillAtas') || '').trim().replace(',', '.');
   const rawValueBawah = String(formData.get('baseBillBawah') || '').trim().replace(',', '.');
+  const rawSinkingPercent = String(formData.get('sinkingPercent') || '').trim().replace(',', '.');
   
   const amountAtas = parseFloat(rawValueAtas);
   const amountBawah = parseFloat(rawValueBawah);
+  const sinkingPercent = parseFloat(rawSinkingPercent);
 
-  if (!Number.isFinite(amountAtas) || amountAtas <= 0 || !Number.isFinite(amountBawah) || amountBawah <= 0) {
+  if (
+    !Number.isFinite(amountAtas) ||
+    amountAtas <= 0 ||
+    !Number.isFinite(amountBawah) ||
+    amountBawah <= 0 ||
+    !Number.isFinite(sinkingPercent) ||
+    sinkingPercent < 0
+  ) {
     return;
   }
 
   const valueStringAtas = amountAtas.toFixed(2);
   const valueStringBawah = amountBawah.toFixed(2);
+  const valueStringSinking = sinkingPercent.toFixed(2);
 
   try {
     await prisma.$executeRaw`
@@ -72,7 +85,13 @@ async function updateBaseBill(formData: FormData) {
       VALUES (${randomUUID()}, 'BASE_MONTHLY_BILL_BAWAH', ${valueStringBawah}, NOW(), NOW())
       ON CONFLICT ("key") DO UPDATE SET "value" = ${valueStringBawah}, "updatedAt" = NOW()
     `;
-  } catch (error: any) {
+    
+    await prisma.$executeRaw`
+      INSERT INTO "SystemSetting" ("id", "key", "value", "createdAt", "updatedAt")
+      VALUES (${randomUUID()}, 'SINKING_FUND_PERCENT', ${valueStringSinking}, NOW(), NOW())
+      ON CONFLICT ("key") DO UPDATE SET "value" = ${valueStringSinking}, "updatedAt" = NOW()
+    `;
+  } catch (error) {
     // Extract PostgreSQL error code from Prisma error
     let pgErrorCode: string | null = null;
     let isPermissionError = false;
@@ -97,8 +116,8 @@ async function updateBaseBill(formData: FormData) {
           isTableNotFoundError = true;
         }
       }
-    } else if (error?.code) {
-      pgErrorCode = error.code;
+    } else if (error && typeof error === 'object' && 'code' in error) {
+      pgErrorCode = (error as any).code;
     }
     
     // 42P01 = table does not exist, 42501 = permission denied
@@ -149,6 +168,9 @@ export default async function SettingsPage() {
               (Unit Atas: RM {baseBillAmounts.atas.toFixed(2)}, Unit Bawah: RM {baseBillAmounts.bawah.toFixed(2)})
               dan sebagai rujukan dalam simulasi pelan ansuran tunggakan.
             </div>
+            <div>
+              Peratus Sinking Fund semasa: {baseBillAmounts.sinkingPercent.toFixed(2)}%.
+            </div>
           </div>
 
           {isManagement ? (
@@ -175,6 +197,20 @@ export default async function SettingsPage() {
                   defaultValue={baseBillAmounts.bawah.toFixed(2)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="sinkingPercent">Peratus Sinking Fund (%)</Label>
+                <Input
+                  id="sinkingPercent"
+                  name="sinkingPercent"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={baseBillAmounts.sinkingPercent.toFixed(2)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contoh: 10 bermaksud 10% daripada caj penyelenggaraan.
+                </p>
+              </div>
               <Button type="submit">
                 Simpan Perubahan
               </Button>
@@ -194,6 +230,14 @@ export default async function SettingsPage() {
                   <span>Bil bulanan Unit Bawah</span>
                   <span className="font-semibold">
                     RM {baseBillAmounts.bawah.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span>Peratus Sinking Fund</span>
+                  <span className="font-semibold">
+                    {baseBillAmounts.sinkingPercent.toFixed(2)}%
                   </span>
                 </div>
               </div>

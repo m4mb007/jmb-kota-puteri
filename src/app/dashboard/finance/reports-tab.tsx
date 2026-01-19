@@ -10,17 +10,57 @@ import { formatCurrency } from '@/lib/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { FinancialReportPDF } from '@/components/pdf/FinancialReportPDF';
 
+interface FundReport {
+  fundId: string;
+  fundName: string;
+  totalIncome: number;
+}
+
+interface FundExpenseReport {
+  fundId: string;
+  fundName: string;
+  totalExpense: number;
+}
+
+interface CategoryExpenseReport {
+  categoryName: string;
+  total: number;
+}
+
+interface FinancialReportData {
+  year: number;
+  incomeByFund: FundReport[];
+  expenseByFund: FundExpenseReport[];
+  expenseByCategory: CategoryExpenseReport[];
+  expenses: {
+    expenseDate: Date | string;
+    description: string;
+    category: { name: string };
+    fund: { name: string };
+    amount: number;
+  }[];
+  generatedAt: Date | string;
+}
+
 export function ReportsTab() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState<string>(currentYear.toString());
   const [loading, setLoading] = useState(false);
-  const [reportData, setReportData] = useState<any>(null);
+  const [reportData, setReportData] = useState<FinancialReportData | null>(null);
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
       const data = await getFinancialReport(parseInt(year));
-      setReportData(data);
+      // Ensure description is not null (type compatibility fix)
+      const safeData = {
+        ...data,
+        expenses: data.expenses.map(e => ({
+          ...e,
+          description: e.description || ''
+        }))
+      };
+      setReportData(safeData);
     } catch (error) {
       console.error(error);
       alert('Failed to generate report');
@@ -83,8 +123,8 @@ export function ReportsTab() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {reportData.incomeByFund.map((fund: any) => {
-                     const expense = reportData.expenseByFund.find((e: any) => e.fundId === fund.fundId);
+                  {reportData.incomeByFund.map((fund) => {
+                     const expense = reportData.expenseByFund.find((e) => e.fundId === fund.fundId);
                      const balance = fund.totalIncome - (expense?.totalExpense || 0);
                      return (
                        <div key={fund.fundId} className="border-b pb-4 last:border-0 last:pb-0">
@@ -110,7 +150,7 @@ export function ReportsTab() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {reportData.expenseByCategory.map((cat: any, i: number) => (
+                  {reportData.expenseByCategory.map((cat, i: number) => (
                     <div key={i} className="flex justify-between items-center p-2 bg-slate-50 rounded">
                       <span>{cat.categoryName}</span>
                       <span className="font-medium">{formatCurrency(cat.total)}</span>

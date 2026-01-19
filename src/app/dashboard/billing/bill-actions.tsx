@@ -1,6 +1,6 @@
 'use client';
 
-import { uploadReceipt, verifyPayment, adminManualPayment } from '@/lib/actions/billing';
+import { uploadReceipt, verifyPayment, adminManualPayment, getRelatedUnpaidBill } from '@/lib/actions/billing';
 import { Button } from '@/components/ui/button';
 import { Check, X, Upload, FileText, Loader2, Download, CreditCard } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
@@ -64,7 +64,20 @@ export function BillActions({
       return;
     }
 
-    if (!confirm('Adakah anda pasti mahu menandakan bil ini sebagai DIBAYAR (Manual)? Pembayaran ini akan diluluskan secara automatik.')) {
+    // Check for related bill
+    let confirmMessage = 'Adakah anda pasti mahu menandakan bil ini sebagai DIBAYAR (Manual)? Pembayaran ini akan diluluskan secara automatik.';
+    let relatedBill = null;
+
+    try {
+      relatedBill = await getRelatedUnpaidBill(id);
+      if (relatedBill) {
+        confirmMessage = `Bil ini mempunyai pasangan ${relatedBill.type === 'MAINTENANCE' ? 'Maintenance' : 'Sinking Fund'} (RM ${relatedBill.amount.toFixed(2)}). Adakah anda mahu membayar KEDUA-DUA bil sekali gus?`;
+      }
+    } catch (err) {
+      console.error("Error checking related bill", err);
+    }
+
+    if (!confirm(confirmMessage)) {
       if (adminFileInputRef.current) adminFileInputRef.current.value = '';
       return;
     }
@@ -74,6 +87,9 @@ export function BillActions({
     formData.append('billId', id);
     formData.append('file', file);
     formData.append('referenceNumber', manualReference);
+    if (relatedBill) {
+      formData.append('includeRelated', 'true');
+    }
 
     try {
       await adminManualPayment(formData);

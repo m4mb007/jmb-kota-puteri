@@ -12,6 +12,22 @@ import { getUserProfile } from "@/lib/actions/users";
 import { Mail, Phone, User as UserIcon, Building2, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
+import { Prisma } from "@prisma/client";
+
+type UserWithUnits = Prisma.UserGetPayload<{
+  include: {
+    ownedUnits: {
+      include: {
+        lot: true,
+      },
+    },
+    rentedUnits: {
+      include: {
+        lot: true,
+      },
+    },
+  },
+}>;
 
 interface UserProfileModalProps {
   userId: string;
@@ -20,7 +36,7 @@ interface UserProfileModalProps {
 
 export function UserProfileModal({ userId, name }: UserProfileModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<UserWithUnits | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleOpenChange = async (open: boolean) => {
@@ -146,11 +162,11 @@ export function UserProfileModal({ userId, name }: UserProfileModalProps) {
                 </h3>
                 {data.ownedUnits.length > 0 ? (
                   <ul className="space-y-2">
-                    {data.ownedUnits.map((unit: any) => (
+                    {data.ownedUnits.map((unit) => (
                       <li key={unit.id} className="p-3 bg-slate-50 rounded-lg border flex justify-between items-center text-sm">
                         <div>
                           <div className="font-medium">{unit.unitNumber}</div>
-                          <div className="text-xs text-muted-foreground">Lot {unit.lot.lotNumber}</div>
+                          <div className="text-xs text-muted-foreground">Lot {unit.lot?.lotNumber}</div>
                         </div>
                         <Link href={`/dashboard/units/${unit.id}`} onClick={() => setIsOpen(false)}>
                           <Button variant="outline" size="sm" className="h-7 text-xs">Lihat</Button>
@@ -169,11 +185,11 @@ export function UserProfileModal({ userId, name }: UserProfileModalProps) {
                 </h3>
                 {data.rentedUnits.length > 0 ? (
                   <ul className="space-y-2">
-                    {data.rentedUnits.map((unit: any) => (
+                    {data.rentedUnits.map((unit) => (
                       <li key={unit.id} className="p-3 bg-slate-50 rounded-lg border flex justify-between items-center text-sm">
                         <div>
                           <div className="font-medium">{unit.unitNumber}</div>
-                          <div className="text-xs text-muted-foreground">Lot {unit.lot.lotNumber}</div>
+                          <div className="text-xs text-muted-foreground">Lot {unit.lot?.lotNumber}</div>
                         </div>
                         <Link href={`/dashboard/units/${unit.id}`} onClick={() => setIsOpen(false)}>
                           <Button variant="outline" size="sm" className="h-7 text-xs">Lihat</Button>

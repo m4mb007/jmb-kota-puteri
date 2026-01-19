@@ -75,7 +75,7 @@ export default function CreateComplaintPage() {
                     <h3 className="text-sm font-medium text-yellow-800">Perhatian: Parking Common</h3>
                     <div className="mt-2 text-sm text-yellow-700">
                       <p>
-                        Parking common adalah kemudahan bersama dan berasaskan "First come, first serve". 
+                        Parking common adalah kemudahan bersama dan berasaskan konsep first come, first serve.
                         Ia tidak dikhaskan untuk mana-mana unit tertentu.
                       </p>
                     </div>

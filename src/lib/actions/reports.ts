@@ -35,7 +35,7 @@ export async function getFinancialReport(year: number) {
   }));
 
   // 3. Aggregate Expenses per Fund
-  const expenseByFund = await Promise.all(funds.map(async (fund: any) => {
+  const expenseByFund = await Promise.all(funds.map(async (fund) => {
     const aggregate = await prisma.expense.aggregate({
       where: {
         fundId: fund.id,
@@ -56,7 +56,7 @@ export async function getFinancialReport(year: number) {
 
   // 4. Expenses by Category
   const categories = await prisma.expenseCategory.findMany();
-  const expenseByCategory = await Promise.all(categories.map(async (cat: any) => {
+  const expenseByCategory = await Promise.all(categories.map(async (cat) => {
     const aggregate = await prisma.expense.aggregate({
       where: {
         categoryId: cat.id,

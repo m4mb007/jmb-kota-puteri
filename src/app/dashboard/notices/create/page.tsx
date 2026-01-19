@@ -20,8 +20,8 @@ export const dynamic = 'force-dynamic';
 export default async function CreateNoticePage() {
   const session = await auth();
   
-  // Protect page: Only SUPER_ADMIN can access
-  if (!session || !session.user || session.user.role !== 'SUPER_ADMIN') {
+  // Protect page: Allow SUPER_ADMIN, JMB and STAFF can access
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
     redirect('/dashboard/notices');
   }
 

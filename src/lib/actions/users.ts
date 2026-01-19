@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { createAuditLog } from '@/lib/actions/audit';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { Role, Gender, Religion, Prisma, CommitteeType } from '@prisma/client';
 
 async function saveFile(file: File, folder: string): Promise<string> {
   const bytes = await file.arrayBuffer();
@@ -26,12 +27,12 @@ export async function createUser(formData: FormData) {
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  const role = formData.get('role') as any;
+  const role = formData.get('role') as Role;
   const phone = formData.get('phone') as string;
   
   const icNumber = formData.get('icNumber') as string;
-  const gender = formData.get('gender') as any;
-  const religion = formData.get('religion') as any;
+  const gender = formData.get('gender') as Gender;
+  const religion = formData.get('religion') as Religion;
 
   if (!name || !password || !role || !phone) {
     throw new Error('Semua medan wajib diisi');
@@ -63,7 +64,7 @@ export async function createUser(formData: FormData) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         name,
         email: email || null,
@@ -83,9 +84,9 @@ export async function createUser(formData: FormData) {
 
     await createAuditLog('CREATE_USER', `Created user: ${name} (${role})`);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create user:', error);
-    if (error.code === 'P2002' && error.meta?.target) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && error.meta?.target) {
       const target = error.meta.target;
       if (Array.isArray(target)) {
         if (target.includes('email')) throw new Error('Emel ini telah digunakan.');
@@ -167,8 +168,8 @@ export async function updateProfile(formData: FormData) {
   const email = formData.get('email') as string;
   const phone = formData.get('phone') as string;
   const icNumber = formData.get('icNumber') as string;
-  const gender = formData.get('gender') as any;
-  const religion = formData.get('religion') as any;
+  const gender = formData.get('gender') as Gender;
+  const religion = formData.get('religion') as Religion;
   
   const currentPassword = formData.get('currentPassword') as string;
   const newPassword = formData.get('newPassword') as string;
@@ -177,14 +178,12 @@ export async function updateProfile(formData: FormData) {
   if (!name) throw new Error('Nama wajib diisi.');
   if (!phone) throw new Error('No. Telefon wajib diisi.');
 
-  // Validate password change if any password field is filled
-  if (currentPassword || newPassword || confirmPassword) {
+  // Validate password change only if new password is provided
+  if (newPassword) {
     if (!currentPassword) {
       throw new Error('Sila masukkan kata laluan semasa untuk menukar kata laluan.');
     }
-    if (!newPassword) {
-      throw new Error('Sila masukkan kata laluan baru.');
-    }
+
     if (newPassword.length < 6) {
       throw new Error('Kata laluan baru mesti sekurang-kurangnya 6 aksara.');
     }
@@ -208,7 +207,7 @@ export async function updateProfile(formData: FormData) {
     }
   }
 
-  const data: any = {
+  const data: Prisma.UserUpdateInput = {
     name,
     email: email || null,
     phone,
@@ -254,9 +253,9 @@ export async function updateProfile(formData: FormData) {
       ? `User updated profile and changed password: ${name}` 
       : `User updated profile: ${name}`;
     await createAuditLog('UPDATE_PROFILE', auditDetails);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update profile:', error);
-    if (error.code === 'P2002' && error.meta?.target) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && error.meta?.target) {
       const target = error.meta.target;
       if (Array.isArray(target)) {
         if (target.includes('email')) throw new Error('Emel ini telah digunakan.');
@@ -280,12 +279,12 @@ export async function updateUser(userId: string, formData: FormData) {
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  const role = formData.get('role') as any;
+  const role = formData.get('role') as Role;
   const phone = formData.get('phone') as string;
   
   const icNumber = formData.get('icNumber') as string;
-  const gender = formData.get('gender') as any;
-  const religion = formData.get('religion') as any;
+  const gender = formData.get('gender') as Gender;
+  const religion = formData.get('religion') as Religion;
   
   // Committee info
   const committeeType = formData.get('committeeType') as string;
@@ -295,7 +294,7 @@ export async function updateUser(userId: string, formData: FormData) {
     throw new Error('Nama, Peranan, dan No. Telefon wajib diisi.');
   }
 
-  const data: any = {
+  const data: Prisma.UserUpdateInput = {
     name,
     email: email || null,
     role,
@@ -303,7 +302,7 @@ export async function updateUser(userId: string, formData: FormData) {
     icNumber: icNumber || null,
     gender: gender || null,
     religion: religion || null,
-    committeeType: (committeeType && committeeType !== '_none') ? committeeType : null,
+    committeeType: (committeeType && committeeType !== '_none') ? (committeeType as CommitteeType) : null,
     committeePosition: committeePosition || null,
   };
 
@@ -340,9 +339,9 @@ export async function updateUser(userId: string, formData: FormData) {
     });
     
     await createAuditLog('UPDATE_USER', `Super Admin updated user: ${name} (${role})`);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update user:', error);
-    if (error.code === 'P2002' && error.meta?.target) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && error.meta?.target) {
         const target = error.meta.target;
         if (Array.isArray(target)) {
           if (target.includes('email')) throw new Error('Emel ini telah digunakan.');

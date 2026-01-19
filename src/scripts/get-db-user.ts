@@ -34,7 +34,8 @@ async function getDbUser() {
       console.log('\nSystemSetting table not found in pg_tables')
     }
     
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as { message: string };
     console.error('Error:', error.message)
   } finally {
     await pool.end()

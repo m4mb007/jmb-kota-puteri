@@ -17,7 +17,7 @@ async function getUser(phone: string) {
   }
 }
 
-export const { auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   trustHost: true,
   providers: [
@@ -65,7 +65,7 @@ export const { auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.role = token.role as any;
+        session.user.role = token.role as typeof session.user.role;
         session.user.id = token.id as string;
       }
       return session;

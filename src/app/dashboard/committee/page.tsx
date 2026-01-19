@@ -77,7 +77,19 @@ export default async function CommitteePage() {
   );
 }
 
-function CommitteeCard({ member }: { member: any }) {
+function CommitteeCard({
+  member,
+}: {
+  member: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    role: string;
+    committeePosition: string | null;
+    ownedUnits: { unitNumber: string }[];
+    rentedUnits: { unitNumber: string }[];
+  };
+}) {
   // Get primary unit (owned or rented)
   const unit = member.ownedUnits[0] || member.rentedUnits[0];
 

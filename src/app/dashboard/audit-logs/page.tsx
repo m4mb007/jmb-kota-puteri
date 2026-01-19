@@ -16,8 +16,8 @@ export const dynamic = 'force-dynamic';
 export default async function AuditLogsPage() {
   const session = await auth();
   
-  // Protect this page: Only Management roles
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  // Protect this page: Only Super Admin
+  if (!session || !session.user || session.user.role !== 'SUPER_ADMIN') {
     redirect('/dashboard'); 
   }
 

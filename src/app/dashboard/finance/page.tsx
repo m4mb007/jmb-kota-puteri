@@ -11,6 +11,35 @@ import { ExpenseActions } from './expense-actions';
 
 export const dynamic = 'force-dynamic';
 
+interface FundWithStats {
+  id: string;
+  name: string;
+  balance: number;
+  totalIncome: number;
+  totalExpense: number;
+}
+
+interface ExpenseWithRelations {
+  id: string;
+  expenseDate: Date | string;
+  description: string;
+  amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  attachmentUrl?: string | null;
+  category: { name: string };
+  fund: { name: string };
+}
+
+interface IncomeWithRelations {
+  id: string;
+  date: Date | string;
+  description?: string | null;
+  amount: number;
+  source: string;
+  fund: { name: string };
+  unit: { unitNumber: string } | null;
+}
+
 export default async function FinancePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const session = await auth();
   if (!session?.user) {
@@ -26,7 +55,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const tab = params?.tab || 'overview';
 
-  const funds = await getFunds();
+  const funds = await getFunds() as FundWithStats[];
   const categories = await getExpenseCategories();
 
   // Helper to format date
@@ -42,7 +71,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       
       {tab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           {funds.map((fund: any) => (
+           {funds.map((fund) => (
              <Card key={fund.id}>
                <CardHeader>
                  <CardTitle>{fund.name}</CardTitle>
@@ -87,9 +116,9 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                  </TableRow>
                </TableHeader>
                <TableBody>
-                 {(await getExpenses()).map((expense: any) => (
+                 {(await getExpenses() as ExpenseWithRelations[]).map((expense) => (
                    <TableRow key={expense.id}>
-                     <TableCell>{formatDate(expense.expenseDate)}</TableCell>
+                     <TableCell>{formatDate(new Date(expense.expenseDate))}</TableCell>
                      <TableCell>
                         <div className="font-medium">{expense.description}</div>
                         {expense.attachmentUrl && (
@@ -141,9 +170,9 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                    </TableRow>
                  </TableHeader>
                  <TableBody>
-                  {(await getIncomeCollections()).map((income: any) => (
+                  {(await getIncomeCollections() as IncomeWithRelations[]).map((income) => (
                     <TableRow key={income.id}>
-                      <TableCell>{formatDate(income.date)}</TableCell>
+                      <TableCell>{formatDate(new Date(income.date))}</TableCell>
                        <TableCell>
                          {income.unit ? (
                            <span className="font-medium">{income.unit.unitNumber}</span>

@@ -15,7 +15,12 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 
-export function CreateIncomeDialog({ funds }: { funds: any[] }) {
+interface FundOption {
+  id: string;
+  name: string;
+}
+
+export function CreateIncomeDialog({ funds }: { funds: FundOption[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 

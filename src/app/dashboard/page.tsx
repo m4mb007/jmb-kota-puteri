@@ -2,6 +2,13 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard';
 import { ResidentDashboard } from '@/components/dashboard/resident-dashboard';
+import type { Prisma } from '@prisma/client';
+
+type ResidentUnit = Prisma.UnitGetPayload<{
+  include: {
+    parkings: true;
+  };
+}>;
 
 export const dynamic = 'force-dynamic';
 
@@ -65,11 +72,13 @@ export default async function DashboardPage() {
           prisma.aGM.count({
             where: { status: 'ACTIVE' },
           }),
-          prisma.auditLog.findMany({
-            take: 5,
-            orderBy: { createdAt: 'desc' },
-            include: { user: { select: { name: true } } },
-          }),
+          role === 'SUPER_ADMIN' 
+            ? prisma.auditLog.findMany({
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                include: { user: { select: { name: true } } },
+              })
+            : Promise.resolve([]),
           prisma.complaint.groupBy({
             by: ['status'],
             _count: { _all: true },
@@ -79,17 +88,9 @@ export default async function DashboardPage() {
       const totalPendingAmountValue = totalPendingAmount._sum.amount || 0;
       const monthlyIncomeValue = monthlyIncomeAggregate._sum.amount || 0;
 
-      const [maintenanceFund, sinkingFund, upcomingApprovedActivitiesCount] = await Promise.all([
+      const [maintenanceFund, sinkingFund] = await Promise.all([
         prisma.fund.findUnique({ where: { code: 'MAINTENANCE' } }),
         prisma.fund.findUnique({ where: { code: 'SINKING' } }),
-        prisma.activityRequest.count({
-          where: {
-            status: 'APPROVED',
-            date: {
-              gte: now,
-            },
-          },
-        }),
       ]);
 
       let maintenanceBalance = 0;
@@ -190,7 +191,6 @@ export default async function DashboardPage() {
           maintenanceBalance={maintenanceBalance}
           sinkingBalance={sinkingBalance}
           pendingActivitiesCount={pendingActivitiesCount}
-          upcomingApprovedActivitiesCount={upcomingApprovedActivitiesCount}
           topArrearsUnits={topArrearsUnits}
           activeAGMsCount={activeAGMsCount}
           recentAuditLogs={recentAuditLogs}
@@ -213,10 +213,10 @@ export default async function DashboardPage() {
         }
       });
 
-      const unitIds = units.map((u: any) => u.id as string);
+      const unitIds = units.map((u: ResidentUnit) => u.id as string);
 
       const manualArrearsTotal = units.reduce(
-        (sum: number, unit: any) => sum + (unit.manualArrearsAmount || 0),
+        (sum: number, unit: ResidentUnit) => sum + (unit.manualArrearsAmount || 0),
         0
       );
 
@@ -258,7 +258,7 @@ export default async function DashboardPage() {
         systemByUnit.set(unitIdForBill, current);
       }
 
-      const unitsWithArrears = units.map((unit: any) => {
+      const unitsWithArrears = units.map((unit: ResidentUnit) => {
         const manual = unit.manualArrearsAmount || 0;
         const system = systemByUnit.get(unit.id as string) || { total: 0, count: 0 };
         const total = manual + system.total;

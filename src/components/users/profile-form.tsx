@@ -14,9 +14,12 @@ import {
 } from '@/components/ui/select';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Prisma } from '@prisma/client';
+
+type User = Prisma.UserGetPayload<Prisma.UserDefaultArgs>;
 
 interface ProfileFormProps {
-  user: any;
+  user: User;
 }
 
 export default function ProfileForm({ user }: ProfileFormProps) {
@@ -40,9 +43,10 @@ export default function ProfileForm({ user }: ProfileFormProps) {
           if (field) field.value = '';
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.message || 'Gagal mengemaskini profil');
+      const err = error as { message: string };
+      toast.error(err.message || 'Gagal mengemaskini profil');
     } finally {
       setIsSubmitting(false);
     }
@@ -152,7 +156,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                 id="handoverDate" 
                 name="handoverDate" 
                 type="date" 
-                defaultValue={user.handoverDate ? user.handoverDate.split('T')[0] : ''}
+                defaultValue={user.handoverDate ? new Date(user.handoverDate).toISOString().split('T')[0] : ''}
               />
             </div>
             <div className="space-y-2">
@@ -161,7 +165,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                 id="snpDate" 
                 name="snpDate" 
                 type="date" 
-                defaultValue={user.snpDate ? user.snpDate.split('T')[0] : ''}
+                defaultValue={user.snpDate ? new Date(user.snpDate).toISOString().split('T')[0] : ''}
               />
             </div>
           </div>

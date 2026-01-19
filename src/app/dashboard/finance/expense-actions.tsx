@@ -10,7 +10,7 @@ export function ExpenseActions({ id }: { id: string }) {
     try {
       await approveExpense(id);
       toast.success('Expense approved');
-    } catch (error) {
+    } catch {
       toast.error('Failed to approve');
     }
   }
@@ -19,7 +19,7 @@ export function ExpenseActions({ id }: { id: string }) {
     try {
       await rejectExpense(id);
       toast.success('Expense rejected');
-    } catch (error) {
+    } catch {
       toast.error('Failed to reject');
     }
   }

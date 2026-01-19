@@ -47,7 +47,8 @@ async function createSystemSettingTable() {
     `)
 
     console.log('SystemSetting table created successfully!')
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as { message: string; code?: string };
     console.error('Error creating SystemSetting table:', error.message)
     console.error('Error code:', error.code)
     throw error

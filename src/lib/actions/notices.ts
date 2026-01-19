@@ -10,8 +10,8 @@ import { createAuditLog } from '@/lib/actions/audit';
 export async function createNotice(formData: FormData) {
   const session = await auth();
   
-  // Only SUPER_ADMIN can create notices
-  if (!session || !session.user || session.user.role !== 'SUPER_ADMIN') {
+  // Only SUPER_ADMIN, JMB, STAFF can create notices
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -28,7 +28,7 @@ export async function createNotice(formData: FormData) {
   }
 
   try {
-    const notice = await prisma.notice.create({
+    await prisma.notice.create({
       data: {
         title,
         content,
@@ -39,7 +39,7 @@ export async function createNotice(formData: FormData) {
 
     await createAuditLog('CREATE_NOTICE', `Created notice: ${title} (Target: ${target})`);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to create notice:', error);
     throw new Error('Gagal mencipta notis.');
   }

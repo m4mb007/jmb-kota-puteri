@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, AlertCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { updateComplaintStatus } from '@/lib/actions/complaints';
 import { ComplaintStatus } from '@prisma/client';
 

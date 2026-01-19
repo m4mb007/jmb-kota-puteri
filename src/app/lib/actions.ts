@@ -119,7 +119,7 @@ export async function registerUser(
         phone,
         email: email || null,
         password: hashedPassword,
-        role: role as any,
+        role,
       },
     });
     

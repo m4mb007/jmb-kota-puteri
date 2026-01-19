@@ -62,8 +62,9 @@ export function VotingEligibilityCard({
       setShowForm(false);
       setReason('');
       router.refresh();
-    } catch (error: any) {
-      alert(error.message || 'Ralat mengemas kini kelayakan');
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      alert(err?.message || 'Ralat mengemas kini kelayakan');
     } finally {
       setLoading(false);
     }

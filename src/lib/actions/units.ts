@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createAuditLog } from '@/lib/actions/audit';
 import { auth } from '@/auth';
+import { UnitType, Prisma } from '@prisma/client';
 
 export async function createUnit(formData: FormData) {
   const session = await auth();
@@ -14,7 +15,7 @@ export async function createUnit(formData: FormData) {
 
   const unitNumber = formData.get('unitNumber') as string;
   const lotNumber = formData.get('lotNumber') as string;
-  const type = formData.get('type') as any;
+  const type = formData.get('type') as UnitType;
   const parking1 = formData.get('parking1') as string;
   const parking2 = formData.get('parking2') as string;
 
@@ -79,15 +80,14 @@ export async function createUnit(formData: FormData) {
     const parkingInfo = parkingNumbers.length > 0 ? ` with Parkings: ${parkingNumbers.join(', ')}` : '';
     await createAuditLog('CREATE_UNIT', `Created unit ${unitNumber} (Lot ${lotNumber}, Type ${type})${parkingInfo}`);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create unit:', error);
-    // Return specific error message if it's our custom error
-    if (error.message && error.message.includes('Parking')) {
-      throw error; 
+    const err = error as { message?: string; code?: string };
+    if (err.message && err.message.includes('Parking')) {
+      throw new Error(err.message);
     }
-    // Check for Prisma unique constraint violation (e.g., unit number)
-    if (error.code === 'P2002') {
-       throw new Error('Nombor unit sudah wujud.');
+    if (err.code === 'P2002') {
+      throw new Error('Nombor unit sudah wujud.');
     }
     throw new Error('Gagal mencipta unit. Sila cuba lagi.');
   }
@@ -106,7 +106,7 @@ export async function updateUnit(id: string, formData: FormData) {
   const tenantIdRaw = formData.get('tenantId') as string;
   const manualArrearsRaw = formData.get('manualArrearsAmount') as string;
   const monthlyAdjustmentRaw = formData.get('monthlyAdjustmentAmount') as string;
-  const type = formData.get('type') as any;
+  const type = formData.get('type') as UnitType | null;
 
   const ownerId = ownerIdRaw === '_none' ? null : ownerIdRaw;
   const tenantId = tenantIdRaw === '_none' ? null : tenantIdRaw;
@@ -122,7 +122,7 @@ export async function updateUnit(id: string, formData: FormData) {
     }
 
     // Build update data object
-    const updateData: any = {
+    const updateData: Prisma.UnitUpdateInput = {
       manualArrearsAmount,
       monthlyAdjustmentAmount,
     };

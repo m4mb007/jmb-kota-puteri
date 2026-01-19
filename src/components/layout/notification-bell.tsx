@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -61,7 +61,7 @@ export function NotificationBell() {
     try {
       const response = await fetch('/api/v1/notifications');
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as { notifications: Notification[] };
         setNotifications(data.notifications || []);
       }
     } catch (error) {

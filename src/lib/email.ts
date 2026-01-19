@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface EmailOptions {
   to: string;
   subject: string;
@@ -12,10 +10,11 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
   console.log('=== EMAIL SEND ATTEMPT ===');
   console.log('To:', to);
   console.log('Subject:', subject);
-  console.log('API Key configured:', !!process.env.RESEND_API_KEY);
-  console.log('API Key starts with re_123:', process.env.RESEND_API_KEY?.startsWith('re_123'));
+  const apiKey = process.env.RESEND_API_KEY?.trim() ?? '';
+  console.log('API Key configured:', !!apiKey);
+  console.log('API Key starts with re_123:', apiKey.startsWith('re_123'));
   
-  if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.startsWith('re_123')) {
+  if (!apiKey || apiKey.startsWith('re_123')) {
     console.log('❌ Resend API Key not configured or is placeholder. Skipping email.');
     console.log(`To: ${to}, Subject: ${subject}`);
     return;
@@ -23,6 +22,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
 
   try {
     console.log('📧 Attempting to send email via Resend...');
+    const resend = new Resend(apiKey);
     const data = await resend.emails.send({
       from: 'JMB Idaman Kota Puteri <noreply@whispererwolf.site>',
       to,

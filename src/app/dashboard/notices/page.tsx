@@ -28,7 +28,7 @@ export default async function NoticesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Papan Notis</h1>
-        {session?.user?.role === 'SUPER_ADMIN' && (
+        {['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session?.user?.role || '') && (
           <Link href="/dashboard/notices/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Cipta Notis

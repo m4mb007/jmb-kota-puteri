@@ -15,7 +15,17 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 
-export function CreateExpenseDialog({ categories, funds }: { categories: any[], funds: any[] }) {
+interface ExpenseCategoryOption {
+  id: string;
+  name: string;
+}
+
+interface FundOption {
+  id: string;
+  name: string;
+}
+
+export function CreateExpenseDialog({ categories, funds }: { categories: ExpenseCategoryOption[]; funds: FundOption[] }) {
   const [open, setOpen] = useState(false);
 
   async function handleSubmit(formData: FormData) {

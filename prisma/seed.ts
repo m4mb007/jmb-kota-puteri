@@ -131,6 +131,7 @@ async function main() {
   const systemSettings = [
     { key: 'BASE_MONTHLY_BILL_ATAS', value: '95' },   // Upper level units
     { key: 'BASE_MONTHLY_BILL_BAWAH', value: '88' },  // Lower level units
+    { key: 'SINKING_FUND_PERCENT', value: '10' },
   ]
 
   for (const setting of systemSettings) {

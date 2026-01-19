@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import {
@@ -22,10 +23,18 @@ export default async function UsersPage() {
     redirect('/dashboard');
   }
 
+  const whereClause: Prisma.UserWhereInput = {
+    isActive: true,
+  };
+
+  if (session.user.role !== 'SUPER_ADMIN') {
+    whereClause.role = {
+      not: 'SUPER_ADMIN',
+    };
+  }
+
   const users = await prisma.user.findMany({
-    where: {
-      isActive: true,
-    },
+    where: whereClause,
     orderBy: {
       createdAt: 'desc',
     },
@@ -59,7 +68,7 @@ export default async function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user: any) => (
+              {users.map((user: Prisma.UserGetPayload<Prisma.UserDefaultArgs>) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
                     <Link href={`/dashboard/users/${user.id}`} className="hover:underline text-blue-600">

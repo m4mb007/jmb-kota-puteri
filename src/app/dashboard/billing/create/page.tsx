@@ -39,7 +39,7 @@ async function getBaseBillAmounts() {
     }
 
     return { atas, bawah };
-  } catch (error) {
+  } catch {
     return { atas: 95, bawah: 88 };
   }
 }
@@ -75,7 +75,7 @@ export default async function CreateBillPage() {
                   <SelectValue placeholder="-- Pilih Unit --" />
                 </SelectTrigger>
                 <SelectContent>
-                  {units.map((unit: any) => (
+                  {units.map((unit: { id: string; unitNumber: string; type: string }) => (
                     <SelectItem key={unit.id} value={unit.id}>
                       {unit.unitNumber} ({unit.type === 'ATAS' ? 'Atas' : 'Bawah'})
                     </SelectItem>

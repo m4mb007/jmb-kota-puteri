@@ -14,9 +14,12 @@ import {
 } from '@/components/ui/select';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Prisma } from '@prisma/client';
+
+type User = Prisma.UserGetPayload<Prisma.UserDefaultArgs>;
 
 interface EditUserFormProps {
-  user: any;
+  user: User;
 }
 
 export default function EditUserForm({ user }: EditUserFormProps) {
@@ -30,16 +33,17 @@ export default function EditUserForm({ user }: EditUserFormProps) {
     try {
       await updateUserWithId(formData);
       toast.success('Pengguna berjaya dikemaskini');
-    } catch (error: any) {
-      if (error.message.includes('NEXT_REDIRECT')) {
+    } catch (error: unknown) {
+      const err = error as { message: string };
+      if (err.message && err.message.includes('NEXT_REDIRECT')) {
         return; // Redirecting...
       }
-      toast.error(error.message || 'Gagal mengemaskini pengguna');
+      toast.error(err.message || 'Gagal mengemaskini pengguna');
       setIsSubmitting(false);
     }
   };
 
-  const formatDate = (date: any) => {
+  const formatDate = (date: Date | null) => {
     if (!date) return '';
     return new Date(date).toISOString().split('T')[0];
   };
@@ -103,7 +107,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="role">Peranan</Label>
-        <Select name="role" required value={role} onValueChange={setRole}>
+        <Select name="role" required value={role} onValueChange={(val) => setRole(val as any)}>
           <SelectTrigger id="role">
             <SelectValue placeholder="Pilih Peranan" />
           </SelectTrigger>

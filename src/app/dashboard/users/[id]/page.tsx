@@ -275,7 +275,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
           <CardContent>
             {user.rentedUnits.length > 0 ? (
               <ul className="space-y-2">
-                {user.rentedUnits.map((unit: any) => (
+                {user.rentedUnits.map((unit) => (
                   <li key={unit.id} className="p-3 bg-slate-50 rounded-lg border flex justify-between items-center">
                     <div>
                       <div className="font-medium">{unit.unitNumber}</div>

@@ -6,6 +6,7 @@ import { updateUnit } from '@/lib/actions/units';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Prisma } from '@prisma/client';
 import {
   Select,
   SelectContent,
@@ -14,9 +15,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+type UnitWithDetails = Prisma.UnitGetPayload<{
+  include: { parkings: true }
+}>;
+
+type User = Prisma.UserGetPayload<Prisma.UserDefaultArgs>;
+
 interface EditUnitFormProps {
-  unit: any;
-  users: any[];
+  unit: UnitWithDetails;
+  users: User[];
 }
 
 export default function EditUnitForm({ unit, users }: EditUnitFormProps) {
@@ -44,8 +51,9 @@ export default function EditUnitForm({ unit, users }: EditUnitFormProps) {
       }
 
       await updateUnit(unit.id, formData);
-    } catch (error: any) {
-      alert(error.message || 'Gagal mengemaskini unit.');
+    } catch (error) {
+      const err = error as { message: string };
+      alert(err.message || 'Gagal mengemaskini unit.');
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +86,7 @@ export default function EditUnitForm({ unit, users }: EditUnitFormProps) {
         <Label>Parking Aksesori</Label>
         <div className="flex gap-2">
           {unit.parkings.length > 0 ? (
-            unit.parkings.map((p: any) => (
+            unit.parkings.map((p) => (
               <div key={p.id} className="p-2 border rounded-md bg-slate-50 text-slate-500 font-mono text-sm">
                 {p.number}
               </div>
@@ -97,7 +105,7 @@ export default function EditUnitForm({ unit, users }: EditUnitFormProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_none">-- Tiada --</SelectItem>
-            {users.map((user: any) => (
+            {users.map((user) => (
               <SelectItem key={user.id} value={user.id}>
                 {user.name} ({user.role})
               </SelectItem>
@@ -114,7 +122,7 @@ export default function EditUnitForm({ unit, users }: EditUnitFormProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_none">-- Tiada --</SelectItem>
-            {users.map((user: any) => (
+            {users.map((user) => (
               <SelectItem key={user.id} value={user.id}>
                 {user.name} ({user.role})
               </SelectItem>

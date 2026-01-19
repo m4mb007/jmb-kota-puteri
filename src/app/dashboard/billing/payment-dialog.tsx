@@ -6,10 +6,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Upload, CreditCard, Banknote } from 'lucide-react';
-import { uploadReceipt, initiateFPXPayment } from '@/lib/actions/billing';
+import { uploadReceipt, initiateFPXPayment, getRelatedUnpaidBill } from '@/lib/actions/billing';
+import { useEffect } from 'react';
 
 interface PaymentDialogProps {
-  bill: any;
+  bill: { 
+    id: string;
+    amount: number;
+    type: string;
+    month: number;
+    year: number;
+  };
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -17,14 +24,41 @@ interface PaymentDialogProps {
 export function PaymentDialog({ bill, isOpen, onOpenChange }: PaymentDialogProps) {
   const [activeTab, setActiveTab] = useState<'fpx' | 'manual'>('fpx');
   const [isLoading, setIsLoading] = useState(false);
+  const [relatedBill, setRelatedBill] = useState<{ id: string, amount: number, type: string } | null>(null);
+  const [payTogether, setPayTogether] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      // Check for related bill
+      getRelatedUnpaidBill(bill.id).then(related => {
+        if (related) {
+          setRelatedBill({ id: related.id, amount: related.amount, type: related.type });
+          setPayTogether(true); // Default to pay together
+        } else {
+          setRelatedBill(null);
+        }
+      });
+    } else {
+      setRelatedBill(null);
+      setPayTogether(true);
+    }
+  }, [isOpen, bill.id]);
+
+  const totalAmount = payTogether && relatedBill 
+    ? bill.amount + relatedBill.amount 
+    : bill.amount;
+
   const handleFPXPayment = async () => {
-    if (!confirm('Anda akan dibawa ke gerbang pembayaran FPX (Simulasi). Teruskan?')) return;
+    const confirmMessage = payTogether && relatedBill
+      ? `Anda akan membayar RM ${totalAmount.toFixed(2)} untuk ${bill.type} & ${relatedBill.type}. Teruskan?`
+      : 'Anda akan dibawa ke gerbang pembayaran FPX (Simulasi). Teruskan?';
+
+    if (!confirm(confirmMessage)) return;
 
     setIsLoading(true);
     try {
-      const result = await initiateFPXPayment(bill.id);
+      const result = await initiateFPXPayment(bill.id, payTogether && !!relatedBill);
       if (result.success) {
         alert(result.message);
         onOpenChange(false);
@@ -54,6 +88,7 @@ export function PaymentDialog({ bill, isOpen, onOpenChange }: PaymentDialogProps
     const formData = new FormData();
     formData.append('billId', bill.id);
     formData.append('file', file);
+    formData.append('includeRelated', String(payTogether && !!relatedBill));
 
     try {
       await uploadReceipt(formData);
@@ -73,6 +108,29 @@ export function PaymentDialog({ bill, isOpen, onOpenChange }: PaymentDialogProps
         <DialogHeader>
           <DialogTitle>Buat Pembayaran</DialogTitle>
         </DialogHeader>
+
+        {/* Combined Payment Notice */}
+        {relatedBill && (
+          <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-100">
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="payTogether"
+                checked={payTogether}
+                onChange={(e) => setPayTogether(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <div className="text-sm">
+                <label htmlFor="payTogether" className="font-medium text-purple-900 block cursor-pointer">
+                  Bayar sekali dengan bil {relatedBill.type === 'MAINTENANCE' ? 'Maintenance' : 'Sinking Fund'}?
+                </label>
+                <p className="text-purple-700 mt-0.5">
+                  Tambahan RM {relatedBill.amount.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Custom Tabs */}
         <div className="flex w-full rounded-md bg-slate-100 p-1 mt-4">
@@ -115,7 +173,7 @@ export function PaymentDialog({ bill, isOpen, onOpenChange }: PaymentDialogProps
               </div>
 
               <div className="text-sm text-slate-500">
-                Jumlah Perlu Dibayar: <span className="font-bold text-slate-900">RM {bill.amount.toFixed(2)}</span>
+                Jumlah Perlu Dibayar: <span className="font-bold text-slate-900">RM {totalAmount.toFixed(2)}</span>
               </div>
             </div>
           ) : (
@@ -139,7 +197,7 @@ export function PaymentDialog({ bill, isOpen, onOpenChange }: PaymentDialogProps
               </div>
 
               <div className="text-sm text-slate-500 text-center pt-2">
-                Jumlah Perlu Dibayar: <span className="font-bold text-slate-900">RM {bill.amount.toFixed(2)}</span>
+                Jumlah Perlu Dibayar: <span className="font-bold text-slate-900">RM {totalAmount.toFixed(2)}</span>
               </div>
             </form>
           )}

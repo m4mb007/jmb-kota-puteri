@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { createAuditLog } from '@/lib/actions/audit';
 import { join } from 'path';
 import { mkdir, writeFile } from 'fs/promises';
+import { Prisma } from '@prisma/client';
 
 export async function getFunds() {
   const session = await auth();
@@ -26,7 +27,7 @@ export async function getFunds() {
 
   // Calculate balances dynamically
   // Balance = Total Income - Total Expense
-  const fundsWithBalance = await Promise.all(funds.map(async (fund: any) => {
+  const fundsWithBalance = await Promise.all(funds.map(async (fund) => {
     const incomeAgg = await prisma.incomeCollection.aggregate({
       where: { fundId: fund.id },
       _sum: { amount: true },
@@ -164,7 +165,7 @@ export async function getExpenses(filters?: { fundId?: string; status?: 'PENDING
     throw new Error('Unauthorized');
   }
 
-  const where: any = {};
+  const where: Prisma.ExpenseWhereInput = {};
   if (filters?.fundId) where.fundId = filters.fundId;
   if (filters?.status) where.status = filters.status;
   
@@ -195,7 +196,7 @@ export async function getIncomeCollections(filters?: { fundId?: string; month?: 
     throw new Error('Unauthorized');
   }
 
-  const where: any = {};
+  const where: Prisma.IncomeCollectionWhereInput = {};
   if (filters?.fundId) where.fundId = filters.fundId;
   
   if (filters?.month && filters?.year) {

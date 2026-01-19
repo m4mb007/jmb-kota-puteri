@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import {
   Table,
@@ -36,12 +37,7 @@ export default async function BillingPage({
   const params = await searchParams;
   const statusFilter = params?.status;
 
-  const whereClause: {
-    status?: string;
-    unit?: {
-      OR: { ownerId?: string; tenantId?: string }[];
-    };
-  } = {};
+  const whereClause: Prisma.BillWhereInput = {};
 
   if (statusFilter === 'PENDING') {
     whereClause.status = 'PENDING';
@@ -57,7 +53,7 @@ export default async function BillingPage({
   }
 
   const bills = await prisma.bill.findMany({
-    where: whereClause as any,
+    where: whereClause,
     include: {
       unit: {
         include: {
@@ -135,18 +131,16 @@ export default async function BillingPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bills.map((bill: {
-                id: string;
-                unit: { unitNumber: string; owner?: any };
-                month: number;
-                year: number;
-                amount: number;
-                status: string;
-                receiptUrl?: string | null;
-                createdAt: Date;
-              }) => (
+              {bills.map((bill) => (
                 <TableRow key={bill.id}>
                   <TableCell className="font-medium">{bill.unit.unitNumber}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      bill.type === 'SINKING' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {bill.type === 'SINKING' ? 'Sinking Fund' : 'Maintenance'}
+                    </span>
+                  </TableCell>
                   <TableCell>{bill.month}/{bill.year}</TableCell>
                   <TableCell>RM {bill.amount.toFixed(2)}</TableCell>
                   <TableCell>

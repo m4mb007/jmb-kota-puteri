@@ -40,7 +40,7 @@ export default async function UnitsPage() {
     },
   });
 
-  const unitIds = units.map((unit: any) => unit.id as string);
+  const unitIds = units.map((unit) => unit.id as string);
 
   const pendingByUnit = unitIds.length
     ? await prisma.bill.groupBy({
@@ -59,7 +59,7 @@ export default async function UnitsPage() {
     : [];
 
   const arrearsMap = new Map(
-    pendingByUnit.map((item: any) => [
+    pendingByUnit.map((item) => [
       item.unitId,
       {
         total: item._sum.amount || 0,
@@ -101,7 +101,7 @@ export default async function UnitsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {units.map((unit: any) => (
+              {units.map((unit) => (
                 <TableRow key={unit.id}>
                   <TableCell className="font-medium">
                     <Link href={`/dashboard/units/${unit.id}`} className="hover:underline text-blue-600">
@@ -112,7 +112,7 @@ export default async function UnitsPage() {
                   <TableCell>{unit.lot.lotNumber}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {unit.parkings.map((p: any) => (
+                      {unit.parkings.map((p) => (
                         <span key={p.id} className="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded border">
                           {p.number}
                         </span>

@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { sendEmail, EMAIL_TEMPLATES } from '@/lib/email';
 import { sendWhatsAppNotification, WA_TEMPLATES } from '@/lib/whatsapp';
-import { createAuditLog } from '@/lib/actions/audit';
 
 export async function generateBillsLogic(month: number, year: number) {
   const units = await prisma.unit.findMany({
@@ -10,15 +9,15 @@ export async function generateBillsLogic(month: number, year: number) {
     },
   });
 
-  // Fetch base amounts for different unit types
-  let baseAmountAtas = 95;  // Default for ATAS (upper)
-  let baseAmountBawah = 88; // Default for BAWAH (lower)
+  let baseAmountAtas = 95;
+  let baseAmountBawah = 88;
+  let sinkingPercent = 10;
 
   try {
     const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
       SELECT "key", "value"
       FROM "SystemSetting"
-      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH')
+      WHERE "key" IN ('BASE_MONTHLY_BILL_ATAS', 'BASE_MONTHLY_BILL_BAWAH', 'SINKING_FUND_PERCENT')
     `;
 
     for (const row of rows) {
@@ -28,18 +27,19 @@ export async function generateBillsLogic(month: number, year: number) {
           baseAmountAtas = parsed;
         } else if (row.key === 'BASE_MONTHLY_BILL_BAWAH') {
           baseAmountBawah = parsed;
+        } else if (row.key === 'SINKING_FUND_PERCENT') {
+          sinkingPercent = parsed;
         }
       }
     }
   } catch (error) {
-    // Use defaults if query fails
     console.error('Error fetching billing settings:', error);
   }
 
   let createdCount = 0;
 
   for (const unit of units) {
-    const existingBill = await prisma.bill.findFirst({
+    const existingBillCount = await prisma.bill.count({
       where: {
         unitId: unit.id,
         month,
@@ -47,25 +47,42 @@ export async function generateBillsLogic(month: number, year: number) {
       },
     });
 
-    if (!existingBill) {
-      // Select base amount based on unit type
+    if (existingBillCount === 0) {
       const baseAmount = unit.type === 'ATAS' ? baseAmountAtas : baseAmountBawah;
       
-      // Calculate bill amount: baseAmount + unit's monthly adjustment
       const unitAdjustment = unit.monthlyAdjustmentAmount || 0;
-      const billAmount = baseAmount + unitAdjustment;
+      const totalAmount = baseAmount + unitAdjustment;
 
+      const ratio = sinkingPercent / 100;
+      const maintenanceAmount = totalAmount / (1 + ratio);
+      const sinkingAmount = totalAmount - maintenanceAmount;
+
+      // Create Maintenance Bill
       await prisma.bill.create({
         data: {
           unitId: unit.id,
-          amount: billAmount,
+          amount: parseFloat(maintenanceAmount.toFixed(2)),
           month,
           year,
+          type: 'MAINTENANCE',
           status: 'PENDING',
         },
       });
 
-      // Send notifications
+      // Create Sinking Fund Bill
+      await prisma.bill.create({
+        data: {
+          unitId: unit.id,
+          amount: parseFloat(sinkingAmount.toFixed(2)),
+          month,
+          year,
+          type: 'SINKING',
+          status: 'PENDING',
+        },
+      });
+
+      // Send notifications (using total amount for clarity)
+      const billAmount = totalAmount;
       console.log(`📧 Checking notification for Unit ${unit.unitNumber}...`);
       console.log(`Owner email: ${unit.owner?.email || 'NOT SET'}`);
       console.log(`Owner phone: ${unit.owner?.phone || 'NOT SET'}`);

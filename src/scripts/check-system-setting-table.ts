@@ -46,13 +46,14 @@ async function checkSystemSettingTable() {
       try {
         const testRead = await pool.query('SELECT COUNT(*) FROM "SystemSetting"')
         console.log(`\n✓ Can read from table (${testRead.rows[0].count} rows)`)
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as { message: string };
         console.log(`\n✗ Cannot read from table: ${error.message}`)
       }
       
       // Check if we can write to it
       try {
-        const testWrite = await pool.query(`
+        await pool.query(`
           INSERT INTO "SystemSetting" ("id", "key", "value", "createdAt", "updatedAt")
           VALUES ('test-' || gen_random_uuid()::text, 'TEST_KEY', 'test', NOW(), NOW())
           ON CONFLICT ("key") DO UPDATE SET "value" = 'test', "updatedAt" = NOW()
@@ -61,7 +62,8 @@ async function checkSystemSettingTable() {
         
         // Clean up test row
         await pool.query(`DELETE FROM "SystemSetting" WHERE "key" = 'TEST_KEY'`)
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as { message: string; code?: string };
         console.log(`\n✗ Cannot write to table: ${error.message}`)
         console.log(`  Error code: ${error.code}`)
       }
@@ -70,7 +72,8 @@ async function checkSystemSettingTable() {
       console.log('✗ SystemSetting table does NOT exist')
     }
     
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as { message: string; code?: string };
     console.error('Error checking SystemSetting table:', error.message)
     console.error('Error code:', error.code)
   } finally {

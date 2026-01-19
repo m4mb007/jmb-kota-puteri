@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { formatCurrency } from '@/lib/utils';
 
 const styles = StyleSheet.create({
@@ -73,11 +73,17 @@ const styles = StyleSheet.create({
 interface FinancialReportPDFProps {
   data: {
     year: number;
-    incomeByFund: any[];
-    expenseByFund: any[];
-    expenseByCategory: any[];
-    expenses: any[];
-    generatedAt: Date;
+    incomeByFund: { fundId: string; fundName: string; totalIncome: number }[];
+    expenseByFund: { fundId: string; totalExpense: number }[];
+    expenseByCategory: { categoryName: string; total: number }[];
+    expenses: {
+      expenseDate: Date | string;
+      description: string;
+      category: { name: string };
+      fund: { name: string };
+      amount: number;
+    }[];
+    generatedAt: Date | string;
   };
 }
 
@@ -100,7 +106,7 @@ export function FinancialReportPDF({ data }: FinancialReportPDFProps) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>JMB Financial Report</Text>
-          <Text style={styles.subtitle}>Year: {year} | Generated: {generatedAt.toLocaleDateString()}</Text>
+          <Text style={styles.subtitle}>Year: {year} | Generated: {new Date(generatedAt).toLocaleDateString()}</Text>
         </View>
 
         {/* Fund Summary */}

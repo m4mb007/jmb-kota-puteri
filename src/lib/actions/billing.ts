@@ -65,6 +65,35 @@ export async function generateMonthlyBills(month: number, year: number) {
   return result;
 }
 
+export async function getRelatedUnpaidBill(billId: string) {
+  const session = await auth();
+  if (!session || !session.user) {
+    throw new Error('Unauthorized');
+  }
+
+  const currentBill = await prisma.bill.findUnique({
+    where: { id: billId },
+  });
+
+  if (!currentBill) return null;
+
+  // Find the "other" bill for the same unit, month, year, and status PENDING/REJECTED
+  // If current is MAINTENANCE, look for SINKING, and vice versa.
+  const otherType = currentBill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
+
+  const otherBill = await prisma.bill.findFirst({
+    where: {
+      unitId: currentBill.unitId,
+      month: currentBill.month,
+      year: currentBill.year,
+      type: otherType,
+      status: { in: ['PENDING', 'REJECTED'] },
+    },
+  });
+
+  return otherBill;
+}
+
 export async function uploadReceipt(formData: FormData) {
   const session = await auth();
   if (!session || !session.user) {
@@ -73,6 +102,7 @@ export async function uploadReceipt(formData: FormData) {
 
   const billId = formData.get('billId') as string;
   const file = formData.get('file') as File;
+  const includeRelated = formData.get('includeRelated') === 'true';
 
   if (!billId || !file) {
     throw new Error('File is required');
@@ -93,6 +123,24 @@ export async function uploadReceipt(formData: FormData) {
 
   if (!isManagement && !isOwnerOrTenant) {
     throw new Error('Unauthorized: You can only upload receipts for your own units.');
+  }
+
+  // Find related bill if requested
+  let relatedBillId: string | null = null;
+  if (includeRelated) {
+    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
+    const relatedBill = await prisma.bill.findFirst({
+      where: {
+        unitId: bill.unitId,
+        month: bill.month,
+        year: bill.year,
+        type: otherType,
+        status: { in: ['PENDING', 'REJECTED'] },
+      },
+    });
+    if (relatedBill) {
+      relatedBillId = relatedBill.id;
+    }
   }
 
   // Validate file type
@@ -137,6 +185,8 @@ export async function uploadReceipt(formData: FormData) {
 
     // Update bill
     const receiptUrl = `/uploads/receipts/${filename}`;
+    
+    // Update primary bill
     await prisma.bill.update({
       where: { id: billId },
       data: {
@@ -144,8 +194,23 @@ export async function uploadReceipt(formData: FormData) {
         status: 'PAID', // Mark as PAID (Pending Approval)
       },
     });
+    
+    // Update related bill if exists
+    if (relatedBillId) {
+      await prisma.bill.update({
+        where: { id: relatedBillId },
+        data: {
+          receiptUrl,
+          status: 'PAID',
+        },
+      });
+    }
 
-    await createAuditLog('UPLOAD_RECEIPT', `Uploaded receipt for Bill ${billId}: ${filename}`);
+    const logMessage = relatedBillId 
+      ? `Uploaded combined receipt for Bills ${billId} & ${relatedBillId}: ${filename}`
+      : `Uploaded receipt for Bill ${billId}: ${filename}`;
+
+    await createAuditLog('UPLOAD_RECEIPT', logMessage);
 
   } catch (error) {
     console.error('Failed to upload receipt:', error);
@@ -163,7 +228,8 @@ export async function adminManualPayment(formData: FormData) {
 
   const billId = formData.get('billId') as string;
   const file = formData.get('file') as File;
-   const referenceNumber = formData.get('referenceNumber') as string;
+  const referenceNumber = formData.get('referenceNumber') as string;
+  const includeRelated = formData.get('includeRelated') === 'true';
 
   if (!billId) {
     throw new Error('Bill ID required');
@@ -183,6 +249,25 @@ export async function adminManualPayment(formData: FormData) {
 
   if (bill.status === 'APPROVED') {
     return; // Already approved
+  }
+
+  // Find related bill if requested
+  let relatedBillId: string | null = null;
+  let relatedBill = null;
+  if (includeRelated) {
+    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
+    relatedBill = await prisma.bill.findFirst({
+      where: {
+        unitId: bill.unitId,
+        month: bill.month,
+        year: bill.year,
+        type: otherType,
+        status: { in: ['PENDING', 'REJECTED'] },
+      },
+    });
+    if (relatedBill) {
+      relatedBillId = relatedBill.id;
+    }
   }
 
   let receiptUrl = undefined;
@@ -266,11 +351,40 @@ export async function adminManualPayment(formData: FormData) {
     });
   }
 
-  await createAuditLog('MANUAL_PAYMENT', `Manual payment for Bill ${billId} by admin (Ref: ${referenceNumber.trim()})`);
+  // Handle related bill if exists
+  if (relatedBill && relatedBillId) {
+    const updatedRelated = await prisma.bill.update({
+      where: { id: relatedBillId },
+      data: {
+        status,
+        receiptUrl,
+      },
+    });
+
+    const relatedFund = await prisma.fund.findUnique({ where: { code: updatedRelated.type } });
+    if (relatedFund) {
+      await prisma.incomeCollection.create({
+        data: {
+          amount: updatedRelated.amount,
+          date: new Date(updatedRelated.year, updatedRelated.month - 1, 1),
+          source: updatedRelated.type,
+          unitId: updatedRelated.unitId,
+          fundId: relatedFund.id,
+          description: referenceNumber.trim(),
+        }
+      });
+    }
+  }
+
+  const logMessage = relatedBillId
+    ? `Manual payment for Bills ${billId} & ${relatedBillId} by admin (Ref: ${referenceNumber.trim()})`
+    : `Manual payment for Bill ${billId} by admin (Ref: ${referenceNumber.trim()})`;
+
+  await createAuditLog('MANUAL_PAYMENT', logMessage);
   revalidatePath('/dashboard/billing');
 }
 
-export async function initiateFPXPayment(billId: string) {
+export async function initiateFPXPayment(billId: string, includeRelated: boolean = false) {
   const session = await auth();
   if (!session || !session.user) {
     throw new Error('Unauthorized');
@@ -281,6 +395,26 @@ export async function initiateFPXPayment(billId: string) {
 
   if (bill.status === 'APPROVED') {
     throw new Error('Bill already paid');
+  }
+
+  // Find related bill if requested
+  let relatedBillId: string | null = null;
+  let relatedBill = null;
+  
+  if (includeRelated) {
+    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
+    relatedBill = await prisma.bill.findFirst({
+      where: {
+        unitId: bill.unitId,
+        month: bill.month,
+        year: bill.year,
+        type: otherType,
+        status: { in: ['PENDING', 'REJECTED'] },
+      },
+    });
+    if (relatedBill) {
+      relatedBillId = relatedBill.id;
+    }
   }
 
   // SIMULATION: In a real app, this would call ToyyibPay/Stripe API
@@ -294,7 +428,7 @@ export async function initiateFPXPayment(billId: string) {
     data: { status },
   });
 
-  // Create IncomeCollection
+  // Create IncomeCollection for primary bill
   const fund = await prisma.fund.findUnique({ where: { code: updatedBill.type } });
   if (fund) {
     await prisma.incomeCollection.create({
@@ -308,7 +442,32 @@ export async function initiateFPXPayment(billId: string) {
     });
   }
 
-  await createAuditLog('FPX_PAYMENT', `FPX Payment success for Bill ${billId}`);
+  // Handle related bill if exists
+  if (relatedBill && relatedBillId) {
+    const updatedRelated = await prisma.bill.update({
+      where: { id: relatedBillId },
+      data: { status },
+    });
+
+    const relatedFund = await prisma.fund.findUnique({ where: { code: updatedRelated.type } });
+    if (relatedFund) {
+      await prisma.incomeCollection.create({
+        data: {
+          amount: updatedRelated.amount,
+          date: new Date(updatedRelated.year, updatedRelated.month - 1, 1),
+          source: updatedRelated.type,
+          unitId: updatedRelated.unitId,
+          fundId: relatedFund.id
+        }
+      });
+    }
+  }
+
+  const logMessage = relatedBillId
+    ? `FPX Payment success for Bills ${billId} & ${relatedBillId}`
+    : `FPX Payment success for Bill ${billId}`;
+
+  await createAuditLog('FPX_PAYMENT', logMessage);
   revalidatePath('/dashboard/billing');
   
   return { success: true, message: 'Pembayaran FPX Berjaya (Simulasi)' };

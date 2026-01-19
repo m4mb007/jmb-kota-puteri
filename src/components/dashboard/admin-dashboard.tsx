@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Users, FileText, AlertCircle, CalendarRange, TrendingUp, Wallet, ArrowUpRight, History, CheckCircle2, Clock, Megaphone } from 'lucide-react';
+import { Building2, Users, AlertCircle, TrendingUp, Wallet, ArrowUpRight, Megaphone, History, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,6 @@ interface AdminDashboardProps {
   maintenanceBalance: number;
   sinkingBalance: number;
   pendingActivitiesCount: number;
-  upcomingApprovedActivitiesCount: number;
   topArrearsUnits: {
     unitId: string;
     unitNumber: string;
@@ -22,8 +21,16 @@ interface AdminDashboardProps {
     total: number;
   }[];
   activeAGMsCount: number;
-  recentAuditLogs: any[];
+  recentAuditLogs: {
+    user: {
+      name: string | null;
+    } | null;
+    createdAt: string | Date;
+    action: string;
+    details?: string | null;
+  }[];
   complaintStatusStats: { status: string; count: number }[];
+  userRole?: string;
 }
 
 export function AdminDashboard({
@@ -37,15 +44,17 @@ export function AdminDashboard({
   maintenanceBalance,
   sinkingBalance,
   pendingActivitiesCount,
-  upcomingApprovedActivitiesCount,
   topArrearsUnits,
   activeAGMsCount,
   recentAuditLogs,
   complaintStatusStats,
+  userRole,
 }: AdminDashboardProps) {
   const openComplaints = complaintStatusStats.find(s => s.status === 'OPEN')?.count || 0;
   const inProgressComplaints = complaintStatusStats.find(s => s.status === 'IN_PROGRESS')?.count || 0;
   const closedComplaints = complaintStatusStats.find(s => s.status === 'CLOSED')?.count || 0;
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -191,7 +200,7 @@ export function AdminDashboard({
       </div>
 
       {/* Arrears List */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={cn("grid gap-6", isSuperAdmin ? "lg:grid-cols-2" : "grid-cols-1")}>
         <Card className="border-none shadow-sm overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 pb-4">
             <div>
@@ -246,46 +255,48 @@ export function AdminDashboard({
         </Card>
 
         {/* Audit Logs / Activity Card */}
-        <Card className="border-none shadow-sm overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 pb-4">
-            <div className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              <CardTitle className="text-lg font-bold">Aktiviti Sistem Terkini</CardTitle>
-            </div>
-            <Link href="/dashboard/audit-logs" className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-widest">
-              Audit Log
-            </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-slate-50">
-              {recentAuditLogs.length === 0 ? (
-                <div className="p-8 text-center text-sm font-bold text-slate-400 italic">
-                  Tiada rekod aktiviti terkini.
-                </div>
-              ) : (
-                recentAuditLogs.map((log, i) => (
-                  <div key={i} className="px-6 py-4 hover:bg-slate-50/50 transition-colors flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-bold text-slate-900 truncate">{log.user.name}</p>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter shrink-0">
-                          {new Date(log.createdAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{log.action}</p>
-                      {log.details && (
-                        <p className="text-[10px] text-slate-400 mt-1 truncate">{log.details}</p>
-                      )}
-                    </div>
+        {isSuperAdmin && (
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 pb-4">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-blue-600" />
+                <CardTitle className="text-lg font-bold">Aktiviti Sistem Terkini</CardTitle>
+              </div>
+              <Link href="/dashboard/audit-logs" className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-widest">
+                Audit Log
+              </Link>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-50">
+                {recentAuditLogs.length === 0 ? (
+                  <div className="p-8 text-center text-sm font-bold text-slate-400 italic">
+                    Tiada rekod aktiviti terkini.
                   </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                ) : (
+                  recentAuditLogs.map((log, i) => (
+                    <div key={i} className="px-6 py-4 hover:bg-slate-50/50 transition-colors flex items-start gap-4">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                        <Clock className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-bold text-slate-900 truncate">{log.user?.name || 'Unknown User'}</p>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter shrink-0">
+                            {new Date(log.createdAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{log.action}</p>
+                        {log.details && (
+                          <p className="text-[10px] text-slate-400 mt-1 truncate">{log.details}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

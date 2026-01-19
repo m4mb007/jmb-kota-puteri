@@ -103,8 +103,22 @@ const styles = StyleSheet.create({
   },
 });
 
+interface ReportBill {
+  month: number;
+  year: number;
+  amount: number;
+  status: string;
+  updatedAt: Date | string;
+  unit: {
+    unitNumber: string;
+    owner?: {
+      name: string | null;
+    } | null;
+  };
+}
+
 interface MonthlyReportPDFProps {
-  bills: any[];
+  bills: ReportBill[];
   month: number;
   year: number;
 }

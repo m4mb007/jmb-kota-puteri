@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 // Register font (optional, using default Helvetica for now)
 // Font.register({ family: 'Inter', src: '...' });
@@ -128,6 +128,7 @@ interface BillPDFProps {
     month: number;
     year: number;
     status: string;
+    type: string;
     unit: {
       unitNumber: string;
       owner?: {
@@ -144,7 +145,13 @@ const MONTHS = [
   'JULAI', 'OGOS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DISEMBER'
 ];
 
-export const BillPDF = ({ bill }: BillPDFProps) => (
+export const BillPDF = ({ bill }: BillPDFProps) => {
+  const isSinking = bill.type === 'SINKING';
+  const isMaintenance = bill.type === 'MAINTENANCE';
+  // Legacy support: if maintenance but high amount, it might be combined
+  const isCombined = isMaintenance && bill.amount >= 88;
+
+  return (
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Header */}
@@ -221,24 +228,34 @@ export const BillPDF = ({ bill }: BillPDFProps) => (
 
         {/* Rows */}
         {/* Sinking Fund */}
-        {bill.amount >= 88 && (
+        {(isSinking || isCombined) && (
           <View style={styles.tableRow}>
             <Text style={[styles.colNo, styles.cellText]}>1</Text>
             <Text style={[styles.colDesc, styles.cellText]}>SINKING FUND {MONTHS[bill.month - 1]}</Text>
-            <Text style={[styles.colPrice, styles.cellText]}>8.00</Text>
+            <Text style={[styles.colPrice, styles.cellText]}>
+              {isCombined ? '8.00' : bill.amount.toFixed(2)}
+            </Text>
             <Text style={[styles.colUnit, styles.cellText]}>1</Text>
-            <Text style={[styles.colTotal, styles.cellText]}>8.00</Text>
+            <Text style={[styles.colTotal, styles.cellText]}>
+              {isCombined ? '8.00' : bill.amount.toFixed(2)}
+            </Text>
           </View>
         )}
 
         {/* Maintenance Fee */}
-        <View style={styles.tableRow}>
-          <Text style={[styles.colNo, styles.cellText]}>{bill.amount >= 88 ? '2' : '1'}</Text>
-          <Text style={[styles.colDesc, styles.cellText]}>WANG PENYELENGGARAAN {MONTHS[bill.month - 1]}</Text>
-          <Text style={[styles.colPrice, styles.cellText]}>{(bill.amount >= 88 ? 80.00 : bill.amount).toFixed(2)}</Text>
-          <Text style={[styles.colUnit, styles.cellText]}>1</Text>
-          <Text style={[styles.colTotal, styles.cellText]}>{(bill.amount >= 88 ? 80.00 : bill.amount).toFixed(2)}</Text>
-        </View>
+        {(isMaintenance) && (
+          <View style={styles.tableRow}>
+            <Text style={[styles.colNo, styles.cellText]}>{isCombined ? '2' : '1'}</Text>
+            <Text style={[styles.colDesc, styles.cellText]}>WANG PENYELENGGARAAN {MONTHS[bill.month - 1]}</Text>
+            <Text style={[styles.colPrice, styles.cellText]}>
+              {isCombined ? '80.00' : bill.amount.toFixed(2)}
+            </Text>
+            <Text style={[styles.colUnit, styles.cellText]}>1</Text>
+            <Text style={[styles.colTotal, styles.cellText]}>
+              {isCombined ? '80.00' : bill.amount.toFixed(2)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Total */}
@@ -270,3 +287,4 @@ export const BillPDF = ({ bill }: BillPDFProps) => (
     </Page>
   </Document>
 );
+};

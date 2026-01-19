@@ -33,7 +33,8 @@ async function listTables() {
       const result = await pool.query('SELECT * FROM "SystemSetting" LIMIT 1')
       console.log('✓ Can query SystemSetting table')
       console.log(`  Columns: ${result.fields.map(f => f.name).join(', ')}`)
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { message: string; code?: string };
       console.log(`✗ Cannot query SystemSetting: ${error.message}`)
       console.log(`  Error code: ${error.code}`)
     }
@@ -44,12 +45,13 @@ async function listTables() {
       try {
         await pool.query(`SELECT 1 FROM "${name}" LIMIT 1`)
         console.log(`✓ Found table: "${name}"`)
-      } catch (error: any) {
+      } catch {
         // Ignore - table doesn't exist with this name
       }
     }
     
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as { message: string };
     console.error('Error:', error.message)
   } finally {
     await pool.end()
