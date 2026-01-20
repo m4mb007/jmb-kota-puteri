@@ -17,7 +17,7 @@ export default async function DashboardPage() {
     const session = await auth();
     const user = session?.user;
     const role = user?.role || 'OWNER';
-    const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(role);
+    const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(role);
 
     if (isManagement) {
       const now = new Date();
@@ -88,13 +88,15 @@ export default async function DashboardPage() {
       const totalPendingAmountValue = totalPendingAmount._sum.amount || 0;
       const monthlyIncomeValue = monthlyIncomeAggregate._sum.amount || 0;
 
-      const [maintenanceFund, sinkingFund] = await Promise.all([
+      const [maintenanceFund, sinkingFund, depositFund] = await Promise.all([
         prisma.fund.findUnique({ where: { code: 'MAINTENANCE' } }),
         prisma.fund.findUnique({ where: { code: 'SINKING' } }),
+        prisma.fund.findUnique({ where: { code: 'DEPOSIT' } }),
       ]);
 
       let maintenanceBalance = 0;
       let sinkingBalance = 0;
+      let depositBalance = 0;
 
       if (maintenanceFund) {
         const [incomeAgg, expenseAgg] = await Promise.all([
@@ -129,6 +131,24 @@ export default async function DashboardPage() {
           }),
         ]);
         sinkingBalance =
+          (incomeAgg._sum.amount || 0) - (expenseAgg._sum.amount || 0);
+      }
+
+      if (depositFund) {
+        const [incomeAgg, expenseAgg] = await Promise.all([
+          prisma.incomeCollection.aggregate({
+            where: { fundId: depositFund.id },
+            _sum: { amount: true },
+          }),
+          prisma.expense.aggregate({
+            where: {
+              fundId: depositFund.id,
+              status: 'APPROVED',
+            },
+            _sum: { amount: true },
+          }),
+        ]);
+        depositBalance =
           (incomeAgg._sum.amount || 0) - (expenseAgg._sum.amount || 0);
       }
 
@@ -190,6 +210,7 @@ export default async function DashboardPage() {
           monthlyIncome={monthlyIncomeValue}
           maintenanceBalance={maintenanceBalance}
           sinkingBalance={sinkingBalance}
+          depositBalance={depositBalance}
           pendingActivitiesCount={pendingActivitiesCount}
           topArrearsUnits={topArrearsUnits}
           activeAGMsCount={activeAGMsCount}

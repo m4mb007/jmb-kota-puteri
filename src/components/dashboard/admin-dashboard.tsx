@@ -13,6 +13,7 @@ interface AdminDashboardProps {
   monthlyIncome: number;
   maintenanceBalance: number;
   sinkingBalance: number;
+  depositBalance: number;
   pendingActivitiesCount: number;
   topArrearsUnits: {
     unitId: string;
@@ -43,6 +44,7 @@ export function AdminDashboard({
   monthlyIncome,
   maintenanceBalance,
   sinkingBalance,
+  depositBalance,
   pendingActivitiesCount,
   topArrearsUnits,
   activeAGMsCount,
@@ -181,9 +183,17 @@ export function AdminDashboard({
                   <span className="text-sm font-black text-slate-900">RM {sinkingBalance.toFixed(2)}</span>
                 </div>
 
+                <div className="flex justify-between items-center group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                    <span className="text-sm font-bold text-slate-600">Deposit Fund</span>
+                  </div>
+                  <span className="text-sm font-black text-slate-900">RM {depositBalance.toFixed(2)}</span>
+                </div>
+
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
                   <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Jumlah Baki Dana</span>
-                  <span className="text-lg font-black text-slate-900">RM {(maintenanceBalance + sinkingBalance).toFixed(2)}</span>
+                  <span className="text-lg font-black text-slate-900">RM {(maintenanceBalance + sinkingBalance + depositBalance).toFixed(2)}</span>
                 </div>
               </div>
             </div>

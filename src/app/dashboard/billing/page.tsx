@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { Plus, ExternalLink } from 'lucide-react';
 import { BillActions } from './bill-actions';
 import { MonthlyReportButton } from './monthly-report-button';
 import { BulkBillingButton } from './bulk-billing-button';
@@ -33,7 +33,7 @@ export default async function BillingPage({
   const userRole = user?.role || 'OWNER';
   const userId = user?.id;
 
-  const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(userRole);
+  const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(userRole);
   const params = await searchParams;
   const statusFilter = params?.status;
 
@@ -70,7 +70,7 @@ export default async function BillingPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Pengurusan Bil</h1>
-        {['SUPER_ADMIN', 'JMB', 'STAFF'].includes(userRole) && (
+        {isManagement && (
           <div className="flex gap-2">
             <BulkBillingButton />
             <MonthlyReportButton bills={bills} />
@@ -123,6 +123,7 @@ export default async function BillingPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Unit</TableHead>
+                <TableHead>Jenis</TableHead>
                 <TableHead>Bulan/Tahun</TableHead>
                 <TableHead>Jumlah (RM)</TableHead>
                 <TableHead>Status</TableHead>
@@ -136,9 +137,13 @@ export default async function BillingPage({
                   <TableCell className="font-medium">{bill.unit.unitNumber}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      bill.type === 'SINKING' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                      bill.type === 'SINKING' ? 'bg-purple-100 text-purple-800' : 
+                      bill.type === 'DEPOSIT' ? 'bg-orange-100 text-orange-800' :
+                      'bg-blue-100 text-blue-800'
                     }`}>
-                      {bill.type === 'SINKING' ? 'Sinking Fund' : 'Maintenance'}
+                      {bill.type === 'SINKING' ? 'Sinking Fund' : 
+                       bill.type === 'DEPOSIT' ? 'Security Deposit' : 
+                       'Maintenance'}
                     </span>
                   </TableCell>
                   <TableCell>{bill.month}/{bill.year}</TableCell>
@@ -149,16 +154,31 @@ export default async function BillingPage({
                         bill.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
                         bill.status === 'PAID' ? 'bg-blue-100 text-blue-800' :
                         bill.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                        bill.status === 'REFUNDED' ? 'bg-slate-100 text-slate-800' :
+                        bill.status === 'REFUND_PROCESSING' ? 'bg-orange-100 text-orange-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
                         {bill.status === 'APPROVED' ? 'DIBAYAR' :
                          bill.status === 'PAID' ? 'MENUNGGU PENGESAHAN' :
-                         bill.status === 'REJECTED' ? 'DITOLAK' : 'BELUM BAYAR'}
+                         bill.status === 'REJECTED' ? 'DITOLAK' : 
+                         bill.status === 'REFUNDED' ? 'TELAH DIPULANGKAN' : 
+                         bill.status === 'REFUND_PROCESSING' ? 'SEDANG DIPROSES' : 'BELUM BAYAR'}
                       </span>
                       {bill.receiptUrl && (
                         <span className="inline-flex items-center text-xs text-slate-500" title="Resit tersedia">
                           📎
                         </span>
+                      )}
+                      {(bill as any).refundProofUrl && (
+                        <a 
+                          href={(bill as any).refundProofUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-xs text-amber-600 hover:text-amber-800" 
+                          title="Gambar Rumah"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
                       )}
                     </div>
                   </TableCell>
@@ -173,7 +193,7 @@ export default async function BillingPage({
               ))}
               {bills.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24 text-slate-500">
+                  <TableCell colSpan={7} className="text-center h-24 text-slate-500">
                     Tiada bil dijumpai.
                   </TableCell>
                 </TableRow>

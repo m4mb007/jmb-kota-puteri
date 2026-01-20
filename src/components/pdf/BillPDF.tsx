@@ -148,6 +148,7 @@ const MONTHS = [
 export const BillPDF = ({ bill }: BillPDFProps) => {
   const isSinking = bill.type === 'SINKING';
   const isMaintenance = bill.type === 'MAINTENANCE';
+  const isDeposit = bill.type === 'DEPOSIT';
   // Legacy support: if maintenance but high amount, it might be combined
   const isCombined = isMaintenance && bill.amount >= 88;
 
@@ -242,6 +243,21 @@ export const BillPDF = ({ bill }: BillPDFProps) => {
           </View>
         )}
 
+        {/* Deposit */}
+        {isDeposit && (
+          <View style={styles.tableRow}>
+            <Text style={[styles.colNo, styles.cellText]}>1</Text>
+            <Text style={[styles.colDesc, styles.cellText]}>DEPOSIT KESELAMATAN / PENGUBAHSUAIAN</Text>
+            <Text style={[styles.colPrice, styles.cellText]}>
+              {bill.amount.toFixed(2)}
+            </Text>
+            <Text style={[styles.colUnit, styles.cellText]}>1</Text>
+            <Text style={[styles.colTotal, styles.cellText]}>
+              {bill.amount.toFixed(2)}
+            </Text>
+          </View>
+        )}
+
         {/* Maintenance Fee */}
         {(isMaintenance) && (
           <View style={styles.tableRow}>
@@ -265,9 +281,16 @@ export const BillPDF = ({ bill }: BillPDFProps) => {
       </View>
 
       {/* Warning Text */}
-      <Text style={styles.warningText}>
-        SILA JELASKAN BAYARAN SEBELUM 30 HARIBULAN SETIAP BULAN UNTUK MENGELAKKAN DENDA CAJ LEWAT
-      </Text>
+      {!isDeposit && (
+        <Text style={styles.warningText}>
+          SILA JELASKAN BAYARAN SEBELUM 30 HARIBULAN SETIAP BULAN UNTUK MENGELAKKAN DENDA CAJ LEWAT
+        </Text>
+      )}
+      {isDeposit && (
+        <Text style={styles.warningText}>
+          DEPOSIT INI AKAN DIPULANGKAN SEPENUHNYA SETELAH KERJA-KERJA PINDAH MASUK ATAU PENGUBAHSUAIAN SELESAI DAN DISAHKAN OLEH PIHAK PENGURUSAN
+        </Text>
+      )}
 
       {/* Bank Details */}
       <View style={styles.bankDetails}>

@@ -46,7 +46,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
      return <div>Unauthorized</div>;
   }
   
-  const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role);
+  const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role);
 
   if (!isManagement) {
     return <div>Unauthorized</div>;

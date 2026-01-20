@@ -9,10 +9,11 @@ import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { sendEmail, EMAIL_TEMPLATES } from '@/lib/email';
+import { generateBillsLogic } from '@/lib/services/billing';
 
 export async function verifyPayment(id: string, approved: boolean) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -48,13 +49,13 @@ export async function verifyPayment(id: string, approved: boolean) {
 
   await createAuditLog('VERIFY_PAYMENT', `Verified payment for Bill ${id}: ${status}`);
   revalidatePath('/dashboard/billing');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/finance');
 }
-
-import { generateBillsLogic } from '@/lib/services/billing';
 
 export async function generateMonthlyBills(month: number, year: number) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -62,6 +63,8 @@ export async function generateMonthlyBills(month: number, year: number) {
   
   await createAuditLog('GENERATE_MONTHLY_BILLS', `Generated ${result.count} bills for ${month}/${year}`);
   revalidatePath('/dashboard/billing');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/finance');
   return result;
 }
 
@@ -79,7 +82,9 @@ export async function getRelatedUnpaidBill(billId: string) {
 
   // Find the "other" bill for the same unit, month, year, and status PENDING/REJECTED
   // If current is MAINTENANCE, look for SINKING, and vice versa.
-  const otherType = currentBill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
+  const otherType = currentBill.type === 'MAINTENANCE' ? 'SINKING' : (currentBill.type === 'SINKING' ? 'MAINTENANCE' : null);
+
+  if (!otherType) return null;
 
   const otherBill = await prisma.bill.findFirst({
     where: {
@@ -128,18 +133,21 @@ export async function uploadReceipt(formData: FormData) {
   // Find related bill if requested
   let relatedBillId: string | null = null;
   if (includeRelated) {
-    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
-    const relatedBill = await prisma.bill.findFirst({
-      where: {
-        unitId: bill.unitId,
-        month: bill.month,
-        year: bill.year,
-        type: otherType,
-        status: { in: ['PENDING', 'REJECTED'] },
-      },
-    });
-    if (relatedBill) {
-      relatedBillId = relatedBill.id;
+    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : (bill.type === 'SINKING' ? 'MAINTENANCE' : null);
+    
+    if (otherType) {
+      const relatedBill = await prisma.bill.findFirst({
+        where: {
+          unitId: bill.unitId,
+          month: bill.month,
+          year: bill.year,
+          type: otherType,
+          status: { in: ['PENDING', 'REJECTED'] },
+        },
+      });
+      if (relatedBill) {
+        relatedBillId = relatedBill.id;
+      }
     }
   }
 
@@ -218,11 +226,13 @@ export async function uploadReceipt(formData: FormData) {
   }
 
   revalidatePath('/dashboard/billing');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/finance');
 }
 
 export async function adminManualPayment(formData: FormData) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -255,18 +265,21 @@ export async function adminManualPayment(formData: FormData) {
   let relatedBillId: string | null = null;
   let relatedBill = null;
   if (includeRelated) {
-    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
-    relatedBill = await prisma.bill.findFirst({
-      where: {
-        unitId: bill.unitId,
-        month: bill.month,
-        year: bill.year,
-        type: otherType,
-        status: { in: ['PENDING', 'REJECTED'] },
-      },
-    });
-    if (relatedBill) {
-      relatedBillId = relatedBill.id;
+    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : (bill.type === 'SINKING' ? 'MAINTENANCE' : null);
+    
+    if (otherType) {
+      relatedBill = await prisma.bill.findFirst({
+        where: {
+          unitId: bill.unitId,
+          month: bill.month,
+          year: bill.year,
+          type: otherType,
+          status: { in: ['PENDING', 'REJECTED'] },
+        },
+      });
+      if (relatedBill) {
+        relatedBillId = relatedBill.id;
+      }
     }
   }
 
@@ -382,6 +395,8 @@ export async function adminManualPayment(formData: FormData) {
 
   await createAuditLog('MANUAL_PAYMENT', logMessage);
   revalidatePath('/dashboard/billing');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/finance');
 }
 
 export async function initiateFPXPayment(billId: string, includeRelated: boolean = false) {
@@ -402,18 +417,21 @@ export async function initiateFPXPayment(billId: string, includeRelated: boolean
   let relatedBill = null;
   
   if (includeRelated) {
-    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : 'MAINTENANCE';
-    relatedBill = await prisma.bill.findFirst({
-      where: {
-        unitId: bill.unitId,
-        month: bill.month,
-        year: bill.year,
-        type: otherType,
-        status: { in: ['PENDING', 'REJECTED'] },
-      },
-    });
-    if (relatedBill) {
-      relatedBillId = relatedBill.id;
+    const otherType = bill.type === 'MAINTENANCE' ? 'SINKING' : (bill.type === 'SINKING' ? 'MAINTENANCE' : null);
+    
+    if (otherType) {
+      relatedBill = await prisma.bill.findFirst({
+        where: {
+          unitId: bill.unitId,
+          month: bill.month,
+          year: bill.year,
+          type: otherType,
+          status: { in: ['PENDING', 'REJECTED'] },
+        },
+      });
+      if (relatedBill) {
+        relatedBillId = relatedBill.id;
+      }
     }
   }
 
@@ -483,7 +501,7 @@ export async function createBill(formData: FormData) {
   const enteredAmount = parseFloat(formData.get('amount') as string);
   const month = parseInt(formData.get('month') as string);
   const year = parseInt(formData.get('year') as string);
-  const type = (formData.get('type') as 'MAINTENANCE' | 'SINKING') || 'MAINTENANCE';
+  const type = (formData.get('type') as 'MAINTENANCE' | 'SINKING' | 'DEPOSIT') || 'MAINTENANCE';
 
   if (!unitId || isNaN(enteredAmount) || isNaN(month) || isNaN(year)) {
     throw new Error('Semua medan wajib diisi dengan format yang betul');
@@ -503,7 +521,8 @@ export async function createBill(formData: FormData) {
     }
 
     // Calculate final amount: entered amount + adjustment (if any)
-    const unitAdjustment = unit.monthlyAdjustmentAmount || 0;
+    // Only apply adjustment for MAINTENANCE bills
+    const unitAdjustment = (type === 'MAINTENANCE') ? (unit.monthlyAdjustmentAmount || 0) : 0;
     const finalAmount = enteredAmount + unitAdjustment;
 
     const bill = await prisma.bill.create({
@@ -550,9 +569,9 @@ export async function createBill(formData: FormData) {
   redirect('/dashboard/billing');
 }
 
-export async function updateBillStatus(id: string, status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID') {
+export async function updateBillStatus(id: string, status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' | 'REFUNDED') {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -592,5 +611,150 @@ export async function updateBillStatus(id: string, status: 'PENDING' | 'APPROVED
     throw new Error('Gagal mengemaskini status bil.');
   }
 
+  revalidatePath('/dashboard/billing');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/finance');
+}
+
+export async function refundDeposit(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
+    throw new Error('Unauthorized');
+  }
+
+  const billId = formData.get('billId') as string;
+  const file = formData.get('file') as File;
+  const referenceNumber = formData.get('referenceNumber') as string;
+
+  const hasFile = file && file.size > 0;
+  const hasReference = referenceNumber && referenceNumber.trim().length > 0;
+
+  if (!billId) {
+    throw new Error('Bill ID diperlukan.');
+  }
+
+  if (!hasFile && !hasReference) {
+    throw new Error('Sila sertakan bukti: gambar selesai pindah ATAU catatan pengesahan.');
+  }
+
+  const bill = await prisma.bill.findUnique({ where: { id: billId } });
+  if (!bill) throw new Error('Bill not found');
+  if (bill.type !== 'DEPOSIT') throw new Error('Only deposits can be refunded');
+  if (bill.status !== 'APPROVED') throw new Error('Deposit must be APPROVED (held) before refunding');
+
+  let receiptUrl = undefined;
+
+  // Handle file upload
+  if (hasFile) {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      throw new Error('Format fail tidak sah. Sila muat naik JPG, PNG atau PDF sahaja.');
+    }
+    // Validate file size
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Saiz fail terlalu besar (Max 5MB).');
+    }
+
+    try {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const timestamp = Date.now();
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+      const filename = `refund-${billId}-${timestamp}.${extension}`;
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'expenses');
+      await mkdir(uploadDir, { recursive: true });
+      const filepath = join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+      receiptUrl = `/uploads/expenses/${filename}`;
+    } catch (error) {
+      console.error('Failed to upload refund proof:', error);
+      throw new Error('Gagal memuat naik bukti pulangan.');
+    }
+  }
+
+  // Update Bill Status to REFUND_PROCESSING and save refund proof
+  await prisma.bill.update({
+    where: { id: billId },
+    data: { 
+      status: 'REFUND_PROCESSING',
+      refundProofUrl: receiptUrl
+    },
+  });
+
+  await createAuditLog('REFUND_REQUESTED', `Refund requested for Bill ${billId}. Ref: ${hasReference ? referenceNumber : 'Unit Condition Proof'}`);
+  revalidatePath('/dashboard/billing');
+}
+
+export async function approveRefund(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id || !['SUPER_ADMIN', 'FINANCE'].includes(session.user.role)) {
+    throw new Error('Unauthorized: Only Finance can approve refunds');
+  }
+
+  const billId = formData.get('billId') as string;
+  const file = formData.get('file') as File;
+
+  if (!billId) throw new Error('Bill ID required');
+  if (!file || file.size === 0) throw new Error('Sila muat naik bukti pembayaran (resit).');
+
+  const bill = await prisma.bill.findUnique({ where: { id: billId } });
+  if (!bill) throw new Error('Bill not found');
+  if (bill.status !== 'REFUND_PROCESSING') throw new Error('Bill is not pending refund approval');
+
+  // Upload Payment Proof (Finance's receipt)
+  let paymentProofUrl = '';
+  try {
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const timestamp = Date.now();
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    const filename = `refund-payment-${billId}-${timestamp}.${extension}`;
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'expenses');
+    await mkdir(uploadDir, { recursive: true });
+    const filepath = join(uploadDir, filename);
+    await writeFile(filepath, buffer);
+    paymentProofUrl = `/uploads/expenses/${filename}`;
+  } catch (error) {
+    console.error('Failed to upload payment proof:', error);
+    throw new Error('Gagal memuat naik bukti pembayaran.');
+  }
+
+  // Update Bill Status to REFUNDED
+  await prisma.bill.update({
+    where: { id: billId },
+    data: { 
+      status: 'REFUNDED',
+    },
+  });
+
+  // Create Expense
+  // Find "PULANGAN DEPOSIT" category or fallback to "LAIN-LAIN"
+  let category = await prisma.expenseCategory.findUnique({ where: { name: 'PULANGAN DEPOSIT' } });
+  if (!category) {
+    category = await prisma.expenseCategory.findUnique({ where: { name: 'LAIN-LAIN' } });
+  }
+  if (!category) throw new Error('Kategori perbelanjaan tidak dijumpai.');
+
+  const fund = await prisma.fund.findUnique({ where: { code: 'DEPOSIT' } });
+  if (!fund) throw new Error('Dana Deposit tidak dijumpai.');
+
+  const description = `Pulangan Deposit: Unit ${bill.unitId}`;
+
+  await prisma.expense.create({
+    data: {
+      amount: bill.amount,
+      expenseDate: new Date(),
+      description,
+      status: 'APPROVED',
+      attachmentUrl: paymentProofUrl, // Attach the finance payment proof here
+      categoryId: category.id,
+      fundId: fund.id,
+      createdById: session.user.id!,
+      approvedById: session.user.id!,
+    },
+  });
+
+  await createAuditLog('REFUND_APPROVED', `Approved refund for Bill ${billId}`);
   revalidatePath('/dashboard/billing');
 }

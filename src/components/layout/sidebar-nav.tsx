@@ -33,19 +33,19 @@ const navGroups = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutDashboard,
-        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'OWNER', 'TENANT'],
+        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE', 'OWNER', 'TENANT'],
       },
       {
         title: 'Profil Saya',
         href: '/dashboard/profile',
         icon: User,
-        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'OWNER', 'TENANT'],
+        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE', 'OWNER', 'TENANT'],
       },
       {
         title: 'Papan Notis',
         href: '/dashboard/notices',
         icon: Megaphone,
-        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'OWNER', 'TENANT'],
+        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE', 'OWNER', 'TENANT'],
       },
     ]
   },
@@ -56,7 +56,7 @@ const navGroups = [
         title: 'Kewangan',
         href: '/dashboard/finance',
         icon: Banknote,
-        roles: ['SUPER_ADMIN', 'JMB', 'STAFF'],
+        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'],
       },
       {
         title: 'Unit Kediaman',
@@ -79,7 +79,7 @@ const navGroups = [
         title: 'Bil & Bayaran',
         href: '/dashboard/billing',
         icon: FileText,
-        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'OWNER', 'TENANT'],
+        roles: ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE', 'OWNER', 'TENANT'],
       },
       {
         title: 'Aduan Penduduk',
@@ -132,7 +132,7 @@ export function SidebarNav({
   hasPendingActivities = false,
 }: SidebarNavProps) {
   const pathname = usePathname();
-  const isManagement = role === 'SUPER_ADMIN' || role === 'JMB' || role === 'STAFF';
+  const isManagement = role === 'SUPER_ADMIN' || role === 'JMB' || role === 'STAFF' || role === 'FINANCE';
 
   return (
     <nav className="flex flex-col gap-6">

@@ -9,7 +9,7 @@ export async function Sidebar() {
   try {
     const session = await auth();
     const role = session?.user?.role || 'OWNER';
-    const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(role);
+    const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(role);
     let hasArrears = false;
     let hasPendingActivities = false;
 

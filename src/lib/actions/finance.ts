@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client';
 
 export async function getFunds() {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -57,7 +57,7 @@ export async function getFunds() {
 
 export async function getExpenseCategories() {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -68,7 +68,7 @@ export async function getExpenseCategories() {
 
 export async function createExpense(formData: FormData) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -125,7 +125,7 @@ export async function createExpense(formData: FormData) {
 
 export async function approveExpense(id: string) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -143,7 +143,7 @@ export async function approveExpense(id: string) {
 
 export async function rejectExpense(id: string) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -161,7 +161,7 @@ export async function rejectExpense(id: string) {
 
 export async function getExpenses(filters?: { fundId?: string; status?: 'PENDING' | 'APPROVED' | 'REJECTED'; month?: number; year?: number }) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -192,7 +192,7 @@ export async function getExpenses(filters?: { fundId?: string; status?: 'PENDING
 
 export async function getIncomeCollections(filters?: { fundId?: string; month?: number; year?: number }) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
@@ -220,7 +220,7 @@ export async function getIncomeCollections(filters?: { fundId?: string; month?: 
 
 export async function createManualIncome(formData: FormData) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 

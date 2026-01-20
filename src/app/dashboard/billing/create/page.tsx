@@ -46,7 +46,7 @@ async function getBaseBillAmounts() {
 
 export default async function CreateBillPage() {
   const session = await auth();
-  if (!session?.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session?.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     redirect('/dashboard/billing');
   }
 
@@ -109,6 +109,7 @@ export default async function CreateBillPage() {
                 <SelectContent>
                   <SelectItem value="MAINTENANCE">Maintenance Fund</SelectItem>
                   <SelectItem value="SINKING">Sinking Fund</SelectItem>
+                  <SelectItem value="DEPOSIT">Security Deposit</SelectItem>
                 </SelectContent>
               </Select>
             </div>

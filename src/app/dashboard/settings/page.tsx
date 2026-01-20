@@ -145,8 +145,28 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
+  // Prevent FINANCE from accessing settings
+  if (session.user.role === 'FINANCE') {
+    redirect('/dashboard');
+  }
+
   const isManagement = ['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role);
   const baseBillAmounts = await getBaseBillAmounts();
+
+  // Determine user's unit type if not management
+  let userUnitType = null;
+  if (!isManagement) {
+    const userUnit = await prisma.unit.findFirst({
+      where: {
+        OR: [
+          { ownerId: session.user.id },
+          { tenantId: session.user.id }
+        ]
+      },
+      select: { type: true }
+    });
+    userUnitType = userUnit?.type;
+  }
 
   return (
     <div className="max-w-xl space-y-6">
@@ -164,9 +184,15 @@ export default async function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-1 text-sm text-muted-foreground">
             <div>
-              Nilai ini digunakan sebagai bil asas bulanan untuk setiap jenis unit 
-              (Unit Atas: RM {baseBillAmounts.atas.toFixed(2)}, Unit Bawah: RM {baseBillAmounts.bawah.toFixed(2)})
-              dan sebagai rujukan dalam simulasi pelan ansuran tunggakan.
+              Nilai ini digunakan sebagai bil asas bulanan 
+              {!isManagement && userUnitType ? (
+                 userUnitType === 'ATAS' 
+                  ? ` (Unit Atas: RM ${baseBillAmounts.atas.toFixed(2)})` 
+                  : ` (Unit Bawah: RM ${baseBillAmounts.bawah.toFixed(2)})`
+              ) : (
+                ` (Unit Atas: RM ${baseBillAmounts.atas.toFixed(2)}, Unit Bawah: RM ${baseBillAmounts.bawah.toFixed(2)})`
+              )}
+              {' '}dan sebagai rujukan dalam simulasi pelan ansuran tunggakan.
             </div>
             <div>
               Peratus Sinking Fund semasa: {baseBillAmounts.sinkingPercent.toFixed(2)}%.
@@ -217,22 +243,26 @@ export default async function SettingsPage() {
             </form>
           ) : (
             <div className="space-y-2">
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Bil bulanan Unit Atas</span>
-                  <span className="font-semibold">
-                    RM {baseBillAmounts.atas.toFixed(2)}
-                  </span>
+              {(!userUnitType || userUnitType === 'ATAS') && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span>Bil bulanan Unit Atas</span>
+                    <span className="font-semibold">
+                      RM {baseBillAmounts.atas.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Bil bulanan Unit Bawah</span>
-                  <span className="font-semibold">
-                    RM {baseBillAmounts.bawah.toFixed(2)}
-                  </span>
+              )}
+              {(!userUnitType || userUnitType === 'BAWAH') && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span>Bil bulanan Unit Bawah</span>
+                    <span className="font-semibold">
+                      RM {baseBillAmounts.bawah.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span>Peratus Sinking Fund</span>

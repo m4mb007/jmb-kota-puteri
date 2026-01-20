@@ -9,6 +9,7 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   JMB
+  FINANCE
   STAFF
   OWNER
   TENANT
@@ -59,11 +60,14 @@ enum BillStatus {
   PAID
   REJECTED
   APPROVED
+  REFUND_PROCESSING
+  REFUNDED
 }
 
 enum FundType {
   MAINTENANCE
   SINKING
+  DEPOSIT
 }
 
 enum ExpenseStatus {
@@ -199,6 +203,7 @@ model Bill {
   type       FundType   @default(MAINTENANCE)
   status     BillStatus @default(PENDING)
   receiptUrl String?
+  refundProofUrl String?
   
   unitId     String
   unit       Unit       @relation(fields: [unitId], references: [id])

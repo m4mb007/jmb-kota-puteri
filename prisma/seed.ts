@@ -34,6 +34,24 @@ async function main() {
   })
   console.log(`Created user: ${admin.name} (${admin.role})`)
 
+  // 1.5 Create Finance User
+  const financeEmail = 'finance@strata.com'
+  const financeUser = await prisma.user.upsert({
+    where: { email: financeEmail },
+    update: {
+      password: hashedPassword,
+      phone: '0123456788', 
+    },
+    create: {
+      email: financeEmail,
+      name: 'Finance Manager',
+      password: hashedPassword, 
+      role: Role.FINANCE,
+      phone: '0123456788',
+    },
+  })
+  console.log(`Created user: ${financeUser.name} (${financeUser.role})`)
+
   // 2. Create Example Lot (J-13)
   const lotNumber = 'J-13'
   const lot = await prisma.lot.upsert({
@@ -98,6 +116,7 @@ async function main() {
   const funds = [
     { code: FundType.MAINTENANCE, name: 'Maintenance Fund' },
     { code: FundType.SINKING, name: 'Sinking Fund' },
+    { code: FundType.DEPOSIT, name: 'Security Deposit' },
   ]
 
   for (const f of funds) {
@@ -115,7 +134,7 @@ async function main() {
   // 7. Seed Expense Categories
   const categories = [
     'TNB', 'AIR', 'TELEFON / INTERNET', 'INDAH WATER', 
-    'PENGURUSAN', 'PENYELENGGARAAN', 'INSURANS', 'LAIN-LAIN'
+    'PENGURUSAN', 'PENYELENGGARAAN', 'INSURANS', 'PULANGAN DEPOSIT', 'LAIN-LAIN'
   ]
 
   for (const c of categories) {

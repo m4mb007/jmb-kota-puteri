@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 
 export async function getFinancialReport(year: number) {
   const session = await auth();
-  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF'].includes(session.user.role)) {
+  if (!session || !session.user || !['SUPER_ADMIN', 'JMB', 'STAFF', 'FINANCE'].includes(session.user.role)) {
     throw new Error('Unauthorized');
   }
 
